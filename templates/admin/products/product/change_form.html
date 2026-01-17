@@ -1,0 +1,400 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+/* Select2 Custom Styling */
+.select2-container{width:100%!important}
+.select2-container--default .select2-selection--multiple{border:2px solid #e2e8f0!important;border-radius:10px!important;padding:8px 10px!important;min-height:50px!important;background:#fff!important;transition:all 0.2s}
+.select2-container--default .select2-selection--multiple:hover{border-color:#6366f1!important}
+.select2-container--default.select2-container--focus .select2-selection--multiple{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,0.15)!important}
+.select2-container--default .select2-selection--multiple .select2-selection__choice{background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;border:none!important;border-radius:20px!important;padding:6px 12px!important;color:white!important;font-size:13px!important;margin:4px!important}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove{color:white!important;margin-right:8px!important;font-size:16px!important}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover{color:#fecaca!important;background:transparent!important}
+.select2-dropdown{border:2px solid #e2e8f0!important;border-radius:10px!important;box-shadow:0 10px 40px rgba(0,0,0,0.1)!important;margin-top:4px!important}
+.select2-container--default .select2-results__option--highlighted[aria-selected]{background:linear-gradient(135deg,#6366f1,#8b5cf6)!important}
+.select2-container--default .select2-results__option[aria-selected=true]{background:#eef2ff!important;color:#6366f1!important}
+.select2-search--dropdown .select2-search__field{border:2px solid #e2e8f0!important;border-radius:8px!important;padding:10px!important}
+.select2-search--dropdown .select2-search__field:focus{border-color:#6366f1!important;outline:none!important}
+.select2-container--default .select2-selection--multiple .select2-selection__placeholder{color:#9ca3af!important}
+.select2-container--disabled .select2-selection--multiple{background:#f3f4f6!important;opacity:0.6}
+
+/* Cascade Notes */
+.cascade-note{background:linear-gradient(135deg,#dbeafe,#bfdbfe);border:1px solid #3b82f6;border-radius:10px;padding:12px 16px;margin:8px 0;color:#1e40af;font-size:13px;display:flex;align-items:center;gap:10px}
+.cascade-note.success{background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-color:#22c55e;color:#166534}
+.cascade-note.warning{background:linear-gradient(135deg,#fef3c7,#fde68a);border-color:#f59e0b;color:#92400e}
+.cascade-note i{font-size:18px}
+.multiselect-label{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:600;color:#374151}
+.multiselect-label i{color:#6366f1}
+.selected-count{background:#6366f1;color:white;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}
+
+/* Form Builder */
+.form-builder-wrapper{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:24px;margin:24px 0;box-shadow:0 10px 40px rgba(99,102,241,0.3)}
+.form-builder-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;color:white}
+.form-builder-header h3{margin:0 0 4px 0;font-size:20px}
+.form-builder-header p{margin:0;opacity:0.8;font-size:14px}
+.form-builder-body{background:white;border-radius:12px;padding:20px}
+.help-box{background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:16px;margin-bottom:20px}
+.help-box h4{color:#92400e;margin:0 0 8px 0;font-size:14px}
+.help-box ul{margin:0;padding-left:20px;color:#78350f;font-size:13px}
+.field-palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:16px;background:#f8fafc;border-radius:12px;border:2px dashed #e2e8f0;margin-bottom:20px}
+.field-type-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:white;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all 0.2s}
+.field-type-btn:hover{border-color:#6366f1;background:#eef2ff;transform:translateY(-2px)}
+.field-type-btn i{font-size:20px;color:#64748b}
+.field-type-btn:hover i{color:#6366f1}
+.field-type-btn span{font-size:11px;color:#64748b;text-align:center}
+.fields-list{min-height:100px;border:2px dashed #e2e8f0;border-radius:12px;padding:12px;background:#fafafa}
+.field-item{background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.2s}
+.field-item:hover{border-color:#6366f1}
+.field-item.selected{border-color:#6366f1;background:#eef2ff}
+.field-item-icon{width:40px;height:40px;background:#f1f5f9;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#64748b}
+.field-item.selected .field-item-icon{background:#6366f1;color:white}
+.field-item-info{flex:1}
+.field-item-label{font-weight:600;color:#1f2937}
+.field-item-type{font-size:12px;color:#64748b}
+.field-item-required{background:#fef2f2;color:#dc2626;padding:3px 10px;border-radius:20px;font-size:11px}
+.field-item-actions button{width:32px;height:32px;border:none;border-radius:8px;background:transparent;cursor:pointer;color:#64748b}
+.field-item-actions button:hover{background:#f1f5f9}
+.field-item-actions button.del:hover{background:#fef2f2;color:#dc2626}
+.field-settings{background:#f8fafc;border-radius:12px;padding:20px;margin-top:20px;display:none;border:1px solid #e2e8f0}
+.field-settings.active{display:block}
+.field-settings h4{margin:0 0 16px 0;color:#1f2937}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.settings-group{display:flex;flex-direction:column;gap:6px}
+.settings-group label{font-size:13px;font-weight:600;color:#374151}
+.settings-group input,.settings-group select{padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:white;border-radius:10px;border:1px solid #e2e8f0;margin-top:16px}
+.options-container{margin-top:16px}
+.option-row{display:flex;gap:8px;margin-bottom:8px}
+.option-row input{flex:1;padding:10px;border:1px solid #d1d5db;border-radius:8px}
+.option-row button{padding:10px;border:none;border-radius:8px;background:#fef2f2;color:#dc2626;cursor:pointer}
+.add-option-btn{width:100%;padding:12px;border:2px dashed #d1d5db;border-radius:8px;background:transparent;color:#6b7280;cursor:pointer;margin-top:8px}
+.add-option-btn:hover{border-color:#6366f1;color:#6366f1}
+.empty-fields{text-align:center;padding:40px;color:#94a3b8}
+.empty-fields i{font-size:40px;margin-bottom:10px;opacity:0.5}
+.rich-text-wrap{border:1px solid #d1d5db;border-radius:8px;overflow:hidden}
+.ql-toolbar{border:none!important;border-bottom:1px solid #e5e7eb!important;background:#f9fafb}
+.ql-container{border:none!important;min-height:200px;font-size:14px}
+.toggle-switch{position:relative;display:inline-block;width:48px;height:26px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#d1d5db;transition:.3s;border-radius:26px}
+.toggle-slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:white;transition:.3s;border-radius:50%}
+.toggle-switch input:checked+.toggle-slider{background:#6366f1}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(22px)}
+</style>
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+const FIELD_TYPES=[
+{type:'text',icon:'fa-font',label:'Text'},
+{type:'textarea',icon:'fa-align-left',label:'Long Text'},
+{type:'email',icon:'fa-envelope',label:'Email'},
+{type:'phone',icon:'fa-phone',label:'Phone'},
+{type:'number',icon:'fa-hashtag',label:'Number'},
+{type:'date',icon:'fa-calendar',label:'Date'},
+{type:'dropdown',icon:'fa-chevron-down',label:'Dropdown'},
+{type:'checkbox',icon:'fa-check-square',label:'Checkbox'},
+{type:'radio',icon:'fa-circle-dot',label:'Radio'},
+{type:'file',icon:'fa-file-upload',label:'File'},
+{type:'image',icon:'fa-image',label:'Image'},
+{type:'aadhar',icon:'fa-id-card',label:'Aadhar'},
+{type:'pan',icon:'fa-credit-card',label:'PAN'},
+{type:'pincode',icon:'fa-map-pin',label:'Pincode'}
+];
+
+let formFields=[];
+let selectedFieldId=null;
+
+document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(()=>{
+        initCategorySubcategoryFilter();
+        initStateCityMultiSelect();
+        initFormBuilder();
+        initRichText();
+    },400);
+});
+
+// Category → Subcategory
+function initCategorySubcategoryFilter() {
+    const categorySelect = document.getElementById('id_category');
+    const subcategorySelect = document.getElementById('id_subcategory');
+    if (!categorySelect || !subcategorySelect) return;
+    
+    const currentSubcategoryId = subcategorySelect.value;
+    
+    const categoryRow = categorySelect.closest('.form-row');
+    if (categoryRow && !document.getElementById('category-note')) {
+        const note = document.createElement('div');
+        note.className = 'cascade-note';
+        note.id = 'category-note';
+        note.innerHTML = '<i class="fas fa-info-circle"></i> <span>Category select karein → Subcategory filter hogi</span>';
+        categorySelect.parentNode.appendChild(note);
+    }
+    
+    function filterSubcategories() {
+        const categoryId = categorySelect.value;
+        if (!categoryId) {
+            subcategorySelect.innerHTML = '<option value="">---------</option>';
+            updateNote('category-note', '', '<i class="fas fa-info-circle"></i> Pehle Category select karein');
+            return;
+        }
+        
+        updateNote('category-note', 'warning', '<i class="fas fa-spinner fa-spin"></i> Loading...');
+        
+        fetch('/admin/products/product/ajax/get-subcategories/?category_id=' + categoryId)
+            .then(res => res.json())
+            .then(data => {
+                subcategorySelect.innerHTML = '<option value="">---------</option>';
+                if (data.subcategories && data.subcategories.length > 0) {
+                    data.subcategories.forEach(sub => {
+                        const opt = document.createElement('option');
+                        opt.value = sub.id;
+                        opt.textContent = sub.name;
+                        if (String(sub.id) === String(currentSubcategoryId)) opt.selected = true;
+                        subcategorySelect.appendChild(opt);
+                    });
+                    updateNote('category-note', 'success', '<i class="fas fa-check-circle"></i> ' + data.subcategories.length + ' Subcategories');
+                } else {
+                    updateNote('category-note', 'warning', '<i class="fas fa-exclamation-triangle"></i> No subcategories');
+                }
+            });
+    }
+    
+    categorySelect.addEventListener('change', filterSubcategories);
+    if (categorySelect.value) filterSubcategories();
+}
+
+// State → City Multi-Select
+function initStateCityMultiSelect() {
+    const stateSelect = document.getElementById('id_available_states');
+    const citySelect = document.getElementById('id_available_cities');
+    const panIndiaCheck = document.getElementById('id_is_pan_india');
+    
+    if (!stateSelect || !citySelect) return;
+    
+    const currentCityIds = Array.from(citySelect.selectedOptions).map(o => o.value);
+    
+    // Initialize Select2
+    $(stateSelect).select2({
+        placeholder: '🔍 Search & Select States...',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    $(citySelect).select2({
+        placeholder: '🔍 Search & Select Cities...',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    // Add labels with count
+    addLabel(stateSelect, 'state-label', '<i class="fas fa-map-marked-alt"></i> Select States', 'state-count');
+    addLabel(citySelect, 'city-label', '<i class="fas fa-city"></i> Select Cities', 'city-count');
+    
+    // Add note
+    const stateRow = stateSelect.closest('.form-row');
+    if (stateRow && !document.getElementById('state-note')) {
+        const note = document.createElement('div');
+        note.className = 'cascade-note';
+        note.id = 'state-note';
+        note.innerHTML = '<i class="fas fa-info-circle"></i> <span>State(s) select karein → Cities filter hongi</span>';
+        const s2 = stateRow.querySelector('.select2-container');
+        if(s2) s2.parentNode.insertBefore(note, s2.nextSibling);
+    }
+    
+    function addLabel(select, labelId, html, countId) {
+        const row = select.closest('.form-row');
+        if (row && !document.getElementById(labelId)) {
+            const label = document.createElement('div');
+            label.className = 'multiselect-label';
+            label.id = labelId;
+            label.innerHTML = html + ' <span class="selected-count" id="' + countId + '">0 selected</span>';
+            const s2 = row.querySelector('.select2-container');
+            if(s2) s2.parentNode.insertBefore(label, s2);
+        }
+    }
+    
+    function updateCounts() {
+        const stateCount = $(stateSelect).val() ? $(stateSelect).val().length : 0;
+        const cityCount = $(citySelect).val() ? $(citySelect).val().length : 0;
+        const sc = document.getElementById('state-count');
+        const cc = document.getElementById('city-count');
+        if (sc) sc.textContent = stateCount + ' selected';
+        if (cc) cc.textContent = cityCount + ' selected';
+    }
+    
+    function filterCities() {
+        const selectedStates = $(stateSelect).val() || [];
+        updateCounts();
+        
+        if (selectedStates.length === 0) {
+            $(citySelect).empty().append('<option value="">-- Pehle State select karein --</option>').trigger('change');
+            updateNote('state-note', '', '<i class="fas fa-info-circle"></i> State(s) select karein');
+            return;
+        }
+        
+        updateNote('state-note', 'warning', '<i class="fas fa-spinner fa-spin"></i> Loading cities...');
+        
+        fetch('/admin/products/product/ajax/get-cities/?state_ids=' + selectedStates.join(','))
+            .then(res => res.json())
+            .then(data => {
+                $(citySelect).empty();
+                if (data.cities && data.cities.length > 0) {
+                    data.cities.forEach(city => {
+                        const opt = new Option(city.name + ' (' + (city.state__code||'') + ')', city.id, false, currentCityIds.includes(String(city.id)));
+                        $(citySelect).append(opt);
+                    });
+                    $(citySelect).trigger('change');
+                    updateNote('state-note', 'success', '<i class="fas fa-check-circle"></i> ' + data.cities.length + ' Cities available');
+                } else {
+                    $(citySelect).append('<option value="">-- No cities --</option>').trigger('change');
+                    updateNote('state-note', 'warning', '<i class="fas fa-exclamation-triangle"></i> No cities');
+                }
+                updateCounts();
+            });
+    }
+    
+    $(stateSelect).on('change', filterCities);
+    $(citySelect).on('change', updateCounts);
+    
+    // Pan India toggle
+    if (panIndiaCheck) {
+        function toggleLocation() {
+            const isPan = panIndiaCheck.checked;
+            $(stateSelect).prop('disabled', isPan).trigger('change');
+            $(citySelect).prop('disabled', isPan).trigger('change');
+            if (isPan) {
+                updateNote('state-note', '', '<i class="fas fa-globe"></i> Pan India - State/City disabled');
+            } else if (!$(stateSelect).val() || $(stateSelect).val().length === 0) {
+                updateNote('state-note', '', '<i class="fas fa-info-circle"></i> State(s) select karein');
+            }
+        }
+        panIndiaCheck.addEventListener('change', toggleLocation);
+        toggleLocation();
+    }
+    
+    // Initial
+    if ($(stateSelect).val() && $(stateSelect).val().length > 0) filterCities();
+    updateCounts();
+}
+
+function updateNote(noteId, type, message) {
+    const note = document.getElementById(noteId);
+    if (note) {
+        note.className = 'cascade-note' + (type ? ' ' + type : '');
+        note.innerHTML = message;
+    }
+}
+
+// Form Builder
+function initFormBuilder(){
+const schemaField=document.getElementById('id_form_schema');
+if(!schemaField)return;
+try{const d=schemaField.value;if(d&&d!=='[]'&&d!=='null')formFields=JSON.parse(d);if(!Array.isArray(formFields))formFields=[];}catch(e){formFields=[];}
+
+const fieldsets=document.querySelectorAll('fieldset');
+let target=null;
+fieldsets.forEach(fs=>{const h=fs.querySelector('h2');if(h&&h.textContent.toLowerCase().includes('form builder'))target=fs;});
+if(!target)return;
+
+const schemaRow=schemaField.closest('.form-row');
+if(schemaRow)schemaRow.style.display='none';
+
+const html=`<div class="form-builder-wrapper"><div class="form-builder-header"><div><i class="fas fa-magic" style="font-size:32px;"></i></div><div><h3>Visual Form Builder</h3><p>Click field types to add</p></div></div><div class="form-builder-body"><div class="help-box"><h4><i class="fas fa-lightbulb"></i> How to use</h4><ul><li>Click field type to add</li><li>Click field to edit</li><li>Save product</li></ul></div><h4 style="margin-bottom:12px;"><i class="fas fa-plus-circle" style="color:#6366f1;"></i> Add Fields</h4><div class="field-palette" id="fieldPalette"></div><h4 style="margin:20px 0 12px;"><i class="fas fa-list" style="color:#10b981;"></i> Fields (<span id="fieldCount">0</span>)</h4><div class="fields-list" id="fieldsList"></div><div class="field-settings" id="fieldSettings"></div></div></div>`;
+
+const container=document.createElement('div');
+container.innerHTML=html;
+const firstRow=target.querySelector('.form-row');
+if(firstRow)firstRow.before(container);else target.appendChild(container);
+
+renderPalette();
+renderFields();
+}
+
+function renderPalette(){
+const p=document.getElementById('fieldPalette');
+if(!p)return;
+p.innerHTML=FIELD_TYPES.map(f=>`<button type="button" class="field-type-btn" onclick="window.addFormField('${f.type}')"><i class="fas ${f.icon}"></i><span>${f.label}</span></button>`).join('');
+}
+
+function renderFields(){
+const list=document.getElementById('fieldsList');
+const count=document.getElementById('fieldCount');
+if(!list)return;
+if(count)count.textContent=formFields.length;
+
+if(formFields.length===0){list.innerHTML='<div class="empty-fields"><i class="fas fa-inbox"></i><p>No fields</p></div>';return;}
+
+list.innerHTML=formFields.map((f,i)=>{
+const cfg=FIELD_TYPES.find(t=>t.type===f.field_type)||{icon:'fa-font',label:f.field_type};
+const sel=selectedFieldId===f.id?'selected':'';
+return`<div class="field-item ${sel}" onclick="window.selectFormField('${f.id}')"><div class="field-item-icon"><i class="fas ${cfg.icon}"></i></div><div class="field-item-info"><div class="field-item-label">${f.label}</div><div class="field-item-type">${cfg.label}</div></div>${f.required?'<span class="field-item-required">Required</span>':''}<div class="field-item-actions"><button type="button" onclick="event.stopPropagation();window.moveFormField('${f.id}','up')" ${i===0?'disabled style="opacity:0.3"':''}><i class="fas fa-chevron-up"></i></button><button type="button" onclick="event.stopPropagation();window.moveFormField('${f.id}','down')" ${i===formFields.length-1?'disabled style="opacity:0.3"':''}><i class="fas fa-chevron-down"></i></button><button type="button" class="del" onclick="event.stopPropagation();window.deleteFormField('${f.id}')"><i class="fas fa-trash"></i></button></div></div>`;
+}).join('');
+
+updateSchema();
+}
+
+function showSettings(fieldId){
+const f=formFields.find(x=>x.id===fieldId);
+if(!f)return;
+const panel=document.getElementById('fieldSettings');
+const hasOpts=['dropdown','checkbox','radio'].includes(f.field_type);
+const isFile=['file','image'].includes(f.field_type);
+
+let optsHtml='';
+if(hasOpts){optsHtml=`<div class="options-container"><label style="font-weight:600;display:block;margin-bottom:8px;">Options</label>${(f.options||[]).map((o,i)=>`<div class="option-row"><input type="text" value="${o.label}" onchange="window.updateFormOption('${f.id}',${i},this.value)"><button type="button" onclick="window.removeFormOption('${f.id}',${i})" ${f.options.length<=1?'disabled style="opacity:0.3"':''}><i class="fas fa-times"></i></button></div>`).join('')}<button type="button" class="add-option-btn" onclick="window.addFormOption('${f.id}')"><i class="fas fa-plus"></i> Add</button></div>`;}
+
+let fileHtml='';
+if(isFile){fileHtml=`<div style="background:#fef3c7;padding:16px;border-radius:10px;margin-top:16px;"><h5 style="margin:0 0 12px 0;color:#92400e;"><i class="fas fa-upload"></i> Upload Settings</h5><div class="settings-grid"><div class="settings-group"><label>Max Files</label><input type="number" value="${f.validation?.max_files||1}" min="1" max="10" onchange="window.updateFormValidation('${f.id}','max_files',parseInt(this.value))"></div><div class="settings-group"><label>Max Size (MB)</label><input type="number" value="${f.validation?.max_file_size_mb||5}" min="1" max="50" onchange="window.updateFormValidation('${f.id}','max_file_size_mb',parseInt(this.value))"></div></div></div>`;}
+
+panel.innerHTML=`<h4><i class="fas fa-cog" style="color:#6366f1;"></i> Field Settings</h4><div class="settings-grid"><div class="settings-group"><label>Label *</label><input type="text" value="${f.label}" onchange="window.updateFormField('${f.id}','label',this.value)"></div><div class="settings-group"><label>Field ID</label><input type="text" value="${f.name}" readonly style="background:#f1f5f9;"></div><div class="settings-group"><label>Placeholder</label><input type="text" value="${f.placeholder||''}" onchange="window.updateFormField('${f.id}','placeholder',this.value)"></div><div class="settings-group"><label>Help Text</label><input type="text" value="${f.help_text||''}" onchange="window.updateFormField('${f.id}','help_text',this.value)"></div></div><div class="toggle-row"><div><strong>Required</strong></div><label class="toggle-switch"><input type="checkbox" ${f.required?'checked':''} onchange="window.updateFormField('${f.id}','required',this.checked)"><span class="toggle-slider"></span></label></div>${optsHtml}${fileHtml}`;
+panel.classList.add('active');
+}
+
+function updateSchema(){const schemaField=document.getElementById('id_form_schema');if(schemaField)schemaField.value=JSON.stringify(formFields);}
+
+window.addFormField=function(type){
+const cfg=FIELD_TYPES.find(t=>t.type===type);
+const newField={id:'field_'+Date.now(),field_type:type,label:cfg?cfg.label.split('/')[0].trim():'Field',name:'field_'+(formFields.length+1),placeholder:'',help_text:'',required:false,order:formFields.length+1,validation:{},options:['dropdown','checkbox','radio'].includes(type)?[{label:'Option 1',value:'option_1'}]:[]};
+if(['file','image'].includes(type))newField.validation={max_files:1,max_file_size_mb:5};
+formFields.push(newField);selectedFieldId=newField.id;renderFields();showSettings(newField.id);
+};
+
+window.selectFormField=function(id){selectedFieldId=id;renderFields();showSettings(id);};
+window.deleteFormField=function(id){if(!confirm('Delete?'))return;formFields=formFields.filter(f=>f.id!==id);if(selectedFieldId===id){selectedFieldId=null;document.getElementById('fieldSettings').classList.remove('active');}renderFields();};
+window.moveFormField=function(id,dir){const idx=formFields.findIndex(f=>f.id===id);if((dir==='up'&&idx===0)||(dir==='down'&&idx===formFields.length-1))return;const newIdx=dir==='up'?idx-1:idx+1;[formFields[idx],formFields[newIdx]]=[formFields[newIdx],formFields[idx]];renderFields();};
+window.updateFormField=function(id,key,value){const f=formFields.find(x=>x.id===id);if(!f)return;f[key]=value;if(key==='label')f.name=value.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';renderFields();showSettings(id);};
+window.updateFormValidation=function(id,key,value){const f=formFields.find(x=>x.id===id);if(!f)return;if(!f.validation)f.validation={};f.validation[key]=value;updateSchema();};
+window.addFormOption=function(id){const f=formFields.find(x=>x.id===id);if(!f||!f.options)return;f.options.push({label:'Option '+(f.options.length+1),value:'option_'+(f.options.length+1)});showSettings(id);updateSchema();};
+window.updateFormOption=function(id,idx,value){const f=formFields.find(x=>x.id===id);if(!f||!f.options||!f.options[idx])return;f.options[idx].label=value;f.options[idx].value=value.toLowerCase().replace(/[^a-z0-9]+/g,'_');updateSchema();};
+window.removeFormOption=function(id,idx){const f=formFields.find(x=>x.id===id);if(!f||!f.options||f.options.length<=1)return;f.options.splice(idx,1);showSettings(id);updateSchema();};
+
+// Rich Text
+function initRichText(){
+const descField=document.getElementById('id_description');
+if(!descField||typeof Quill==='undefined')return;
+const container=document.createElement('div');
+container.className='rich-text-wrap';
+container.innerHTML='<div id="desc-editor"></div>';
+descField.style.display='none';
+descField.parentNode.insertBefore(container,descField);
+const quill=new Quill('#desc-editor',{theme:'snow',placeholder:'Enter description...',modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{color:[]},{background:[]}],[{list:'ordered'},{list:'bullet'}],['link'],['clean']]}});
+quill.root.innerHTML=descField.value;
+quill.on('text-change',()=>{descField.value=quill.root.innerHTML;});
+}
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+# =============================================
+# CloudServices India - Requirements
+# =============================================
+
+# Django Core
+Django>=5.0,<6.0
+djangorestframework>=3.14
+django-cors-headers>=4.0
+
+# Authentication
+djangorestframework-simplejwt>=5.3
+django-phonenumber-field>=7.0
+phonenumbers>=8.13
+
+# Database & Files
+Pillow>=10.0
+
+# Utilities
+python-decouple>=3.8
+django-filter>=24.0
+whitenoise>=6.6
+
+# API Documentation
+drf-spectacular>=0.27
+
+# Payment Gateway
+razorpay>=1.4
+requests>=2.31
