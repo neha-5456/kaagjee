@@ -30,11 +30,19 @@ class RegisterRequestView(APIView):
         
         phone_number = serializer.validated_data['phone_number']
         
+        # Debug: Print registration data to check if it's being stored
+        registration_data = {
+            'first_name': serializer.validated_data.get('first_name', ''),
+            'last_name': serializer.validated_data.get('last_name', ''),
+            'email': serializer.validated_data.get('email', '')
+        }
+        print(f"Storing registration data: {registration_data}")
+        
+        # Store registration data in session for temporary storage
+        request.session[f'registration_data_{phone_number}'] = registration_data
+        
         # Generate and send OTP
         otp = OTP.generate(phone_number, OTP.Purpose.REGISTRATION)
-        
-        # In production, send SMS here
-        # For development, include OTP in response (remove in production)
         
         return Response({
             'success': True,
@@ -66,21 +74,30 @@ class RegisterVerifyView(APIView):
         otp.is_verified = True
         otp.save()
         
-        # Get user data from registration request
-        first_name = serializer.validated_data['first_name']
-        last_name = serializer.validated_data['last_name']
-        email = serializer.validated_data['email']
+        # Get registration data from session
         phone_number = serializer.validated_data['phone_number']
+        registration_data = request.session.get(f'registration_data_{phone_number}', {})
         
-        # Find the original registration data from the first request
-        # In a real implementation, you might store this temporarily
-        # For now, create user with minimal data
+        # Debug: Print retrieved data
+        print(f"Retrieved registration data: {registration_data}")
+        
+        # Create user with stored registration data
         user_data = {
             'phone_number': phone_number,
+            'first_name': registration_data.get('first_name', ''),
+            'last_name': registration_data.get('last_name', ''),
+            'email': registration_data.get('email', ''),
             'is_verified': True,
             'is_active': True
         }
+        
+        # Debug: Print user data before creation
+        print(f"Creating user with data: {user_data}")
+        
         user = User.objects.create_user(**user_data)
+        
+        # Clean up session data
+        request.session.pop(f'registration_data_{phone_number}', None)
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
@@ -92,6 +109,10 @@ class RegisterVerifyView(APIView):
                 'user': {
                     'id': user.id,
                     'phone_number': str(user.phone_number),
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'full_name': user.full_name,
                     'is_verified': user.is_verified,
                     'date_joined': user.date_joined.isoformat()
                 },

@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'apps.products',
     'apps.orders',
     'apps.payments',
+    'apps.blog',
+    'apps.banner',
 ]
 
 # =============================================

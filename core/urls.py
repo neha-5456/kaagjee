@@ -8,9 +8,9 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 # Admin Site Customization
-admin.site.site_header = "CloudServices India Admin"
-admin.site.site_title = "CloudServices Admin"
-admin.site.index_title = "Welcome to CloudServices India"
+admin.site.site_header = "Kaagjee"
+admin.site.site_title = ""
+admin.site.index_title = ""
 
 urlpatterns = [
     # Admin
@@ -23,6 +23,8 @@ urlpatterns = [
     path('api/v1/products/', include('apps.products.urls')),
     path('api/v1/orders/', include('apps.orders.urls')),
     path('api/v1/payments/', include('apps.payments.urls')),
+    path('api/v1/blog/', include('apps.blog.urls')),
+    path('api/v1/banners/', include('apps.banner.urls')),
     
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
