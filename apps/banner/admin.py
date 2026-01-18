@@ -13,6 +13,7 @@ class BannerAdmin(admin.ModelAdmin):
     list_editable = ['is_active', 'display_order']
     search_fields = ['title', 'description']
     
+    
     fields = ['title', 'description', 'image', 'is_active', 'display_order']
 
     def image_preview(self, obj):
