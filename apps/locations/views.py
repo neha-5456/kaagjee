@@ -17,7 +17,7 @@ class CitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = City
-        fields = ['id', 'name', 'name_hi', 'slug', 'tier', 'is_popular', 'state', 'state_name', 'state_code']
+        fields = ['id', 'name', 'slug', 'tier', 'is_popular', 'state', 'state_name', 'state_code']
 
 
 class StateSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class StateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = State
-        fields = ['id', 'name', 'name_hi', 'slug', 'code', 'cities_count']
+        fields = ['id', 'name', 'slug', 'code', 'cities_count']
 
 
 class StateDetailSerializer(StateSerializer):

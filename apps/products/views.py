@@ -119,12 +119,12 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     def get_available_states_data(self, obj):
         if obj.is_pan_india:
             return [{'id': None, 'name': 'Pan India', 'code': 'ALL'}]
-        return list(obj.available_states.values('id', 'name', 'name_hi', 'code', 'slug'))
+        return list(obj.available_states.values('id', 'name', 'code', 'slug'))
 
     def get_available_cities_data(self, obj):
         if obj.is_pan_india:
             return [{'id': None, 'name': 'All Cities'}]
-        return list(obj.available_cities.values('id', 'name', 'name_hi', 'slug', 'state__name', 'state__code'))
+        return list(obj.available_cities.values('id', 'name', 'slug', 'state__name', 'state__code'))
 
 
 class FormSchemaSerializer(serializers.ModelSerializer):

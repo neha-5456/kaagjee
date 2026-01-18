@@ -12,11 +12,11 @@ from .serializers import (
 
 
 class BlogPostListView(generics.ListAPIView):
-    """List all published blog posts"""
-    serializer_class = BlogPostListSerializer
+    """List all published blog posts with full details"""
+    serializer_class = BlogPostDetailSerializer
     
     def get_queryset(self):
-        queryset = BlogPost.objects.filter(status='published')
+        queryset = BlogPost.objects.filter(status='published').select_related('author').prefetch_related('categories', 'tags')
         
         # Filter by category
         category = self.request.query_params.get('category')
