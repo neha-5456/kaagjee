@@ -117,7 +117,7 @@ body {
 }
 
 #kaagjee-sidebar .sb-section-title {
-    color: var(--gray-500);
+    color: #ffffff !important;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
@@ -188,17 +188,20 @@ body.kaagjee-admin #container {
     margin-left: var(--sidebar-width) !important;
     min-height: 100vh !important;
     background: #f4f6f9 !important;
+    min-width: 0 !important;
+    width: calc(100% - var(--sidebar-width)) !important;
+    overflow-x: visible !important;
 }
 
 /* ===== HEADER ===== */
 body.kaagjee-admin #header {
-    margin-left: var(--sidebar-width) !important;
+    /* margin-left: var(--sidebar-width) !important; */
     background: white !important;
-    padding: 0 24px !important;
+    /* padding: 0 24px !important; */
     height: 60px !important;
     display: flex !important;
     align-items: center !important;
-    justify-content: flex-end !important;
+    /* justify-content: flex-end !important; */
     border-bottom: 1px solid var(--gray-200) !important;
     position: sticky !important;
     top: 0 !important;
@@ -253,7 +256,7 @@ body.kaagjee-admin #user-tools a[href*="logout"]:hover {
 body.kaagjee-admin div.breadcrumbs {
     background: var(--primary) !important;
     padding: 14px 24px !important;
-    margin-left: var(--sidebar-width) !important;
+    /* margin-left: var(--sidebar-width) !important; */
     color: white !important;
     font-size: 13px !important;
     font-weight: 500 !important;
@@ -271,8 +274,8 @@ body.kaagjee-admin div.breadcrumbs a:hover {
 /* ===== CONTENT ===== */
 body.kaagjee-admin #content {
     padding: 24px !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
+    max-width: none !important;
+    overflow-x: visible !important;
 }
 
 body.kaagjee-admin #content > h1 {
@@ -434,7 +437,7 @@ input[name="_save"]:hover {
 
 /* ===== OBJECT TOOLS ===== */
 .object-tools {
-    margin: 0 0 16px 0 !important;
+    margin: 0 !important;
     padding: 0 !important;
 }
 
@@ -446,6 +449,9 @@ input[name="_save"]:hover {
     text-decoration: none !important;
     font-size: 13px !important;
     font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
 }
 
 .object-tools a:hover {
@@ -462,8 +468,13 @@ table {
     border-radius: var(--radius) !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+
+.results {
+    overflow-x: auto !important;
+    width: 100% !important;
 }
 
 #result_list th,
@@ -508,6 +519,17 @@ table a:hover {
 /* ===== CHANGELIST ===== */
 #changelist {
     background: transparent !important;
+    display: flex !important;
+    gap: 20px !important;
+    align-items: flex-start !important;
+    flex-direction: row-reverse !important;
+}
+
+#changelist .changelist-form-container {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    order: 2 !important;
 }
 
 #changelist #toolbar {
@@ -517,26 +539,79 @@ table a:hover {
     margin-bottom: 16px !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
     display: flex !important;
+    align-items: stretch !important;
+    gap: 0 !important;
+    justify-content: flex-start !important;
+}
+
+#changelist #toolbar .toolbar-left {
+    display: flex !important;
+    align-items: stretch !important;
+    gap: 0 !important;
+    flex: 1 !important;
+    max-width: 500px !important;
+}
+
+#changelist #toolbar .toolbar-right {
+    display: flex !important;
     align-items: center !important;
     gap: 12px !important;
+    margin-left: auto !important;
 }
 
-#changelist #searchbar {
+/* #changelist #searchbar {
     flex: 1 !important;
     max-width: 400px !important;
-}
+    padding: 10px 14px !important;
+    border: 2px solid var(--gray-200) !important;
+    font-size: 14px !important;
+} */
 
-#changelist-search #searchbar {
+/* #changelist-search {
+    display: flex !important;
+    align-items: stretch !important;
+    flex: 1 !important;
+    max-width: 500px !important;
+    height: 44px !important;
+} */
+
+/* #changelist-search #searchbar {
     border-radius: var(--radius) 0 0 var(--radius) !important;
+    border-right: none !important;
+    flex: 1 !important;
+    max-width: none !important;
+    height: 44px !important;
+    padding: 10px 14px !important;
+    border: 2px solid var(--gray-200) !important;
+    font-size: 14px !important;
+    box-sizing: border-box !important;
 }
 
-#changelist-search [type="submit"] {
+#changelist-search [type="submit"],
+#changelist-search [value="Search"] {
     border-radius: 0 var(--radius) var(--radius) 0 !important;
-    padding: 10px 20px !important;
+    padding: 0 20px !important;
+    border: 2px solid var(--primary) !important;
+    border-left: none !important;
+    background: var(--primary) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    height: 44px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
+
+#changelist-search [type="submit"]:hover {
+    background: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+} */
 
 /* Filter Sidebar */
-#changelist-filter {
+/* #changelist-filter {
     background: white !important;
     border-radius: var(--radius) !important;
     padding: 20px !important;
@@ -544,6 +619,23 @@ table a:hover {
     box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
     position: sticky !important;
     top: 80px !important;
+    order: 1 !important;
+    flex-shrink: 0 !important;
+} */
+
+/* Changelist wrapper for responsive layout */
+#changelist .results {
+    display: flex !important;
+    gap: 20px !important;
+    align-items: flex-start !important;
+}
+
+#changelist .results > * {
+    flex: 1 !important;
+}
+
+#changelist .results #changelist-filter {
+    flex: 0 0 200px !important;
 }
 
 #changelist-filter h2 {
@@ -794,11 +886,49 @@ input[type="file"]:hover {
     body.kaagjee-admin #header,
     body.kaagjee-admin div.breadcrumbs {
         margin-left: 0 !important;
+        min-width: 0 !important;
+        width: 100% !important;
     }
     #kaagjee-toggle {
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+    
+    /* Content responsive adjustments */
+    body.kaagjee-admin #content {
+        padding: 16px !important;
+    }
+    
+    /* Changelist responsive */
+    #changelist {
+        flex-direction: column !important;
+    }
+    
+    #changelist-filter {
+        width: 100% !important;
+        position: static !important;
+        order: -1 !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* Table responsive */
+    #result_list,
+    #changelist table,
+    table {
+        overflow-x: auto !important;
+        display: block !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Toolbar responsive */
+    #changelist #toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    
+    #changelist #searchbar {
+        max-width: none !important;
     }
 }
 </style>
@@ -869,6 +999,21 @@ input[type="file"]:hover {
         document.body.appendChild(toggle);
         
         document.body.classList.add('kaagjee-admin');
+        
+        // Move add button to toolbar
+        setTimeout(function() {
+            var toolbar = document.querySelector('#changelist #toolbar');
+            var objectTools = document.querySelector('.object-tools');
+            if (toolbar && objectTools) {
+                // Wrap existing toolbar content
+                var toolbarContent = toolbar.innerHTML;
+                toolbar.innerHTML = '<div class="toolbar-left">' + toolbarContent + '</div><div class="toolbar-right"></div>';
+                
+                // Move object tools to toolbar right
+                var toolbarRight = toolbar.querySelector('.toolbar-right');
+                toolbarRight.appendChild(objectTools);
+            }
+        }, 100);
     }
     
     if (document.readyState === 'loading') {
