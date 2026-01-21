@@ -1,0 +1,32 @@
+{% extends "admin/login.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+body.login {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+}
+#container { background: transparent !important; }
+#header { background: transparent !important; text-align: center; }
+#branding h1 { color: white !important; font-size: 24px !important; }
+#content-main {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    max-width: 360px;
+    margin: 0 auto;
+}
+.form-row { margin-bottom: 15px; }
+.form-row label { display: block; margin-bottom: 5px; font-weight: 600; color: #374151; }
+.form-row input { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; }
+.form-row input:focus { border-color: #3b82f6; outline: none; }
+.submit-row input { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.submit-row input:hover { background: #1e3a8a; }
+.errornote { background: #fef2f2; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+#footer { display: none; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+{% endblock %}
