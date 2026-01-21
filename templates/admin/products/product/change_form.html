@@ -406,13 +406,13 @@
         console.log('✅ Category filter init');
         var currentSub = $subcat.val();
         
-        $cat.after('<div class="cascade-note" id="cat-note"><i class="fas fa-info-circle"></i> Category select karein</div>');
+        $cat.after('<div class="cascade-note" id="cat-note"><i class="fas fa-info-circle"></i> Select category</div>');
         
         $cat.on('change', function() {
             var catId = $(this).val();
             if (!catId) {
                 $subcat.html('<option value="">---------</option>');
-                $('#cat-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Category select karein');
+                $('#cat-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select category');
                 return;
             }
             
@@ -461,13 +461,13 @@
             console.log('⚠️ Select2 error:', e);
         }
         
-        $states.closest('.form-row').append('<div class="cascade-note" id="state-note"><i class="fas fa-info-circle"></i> State select karein</div>');
+        $states.closest('.form-row').append('<div class="cascade-note" id="state-note"><i class="fas fa-info-circle"></i> Select state</div>');
         
         $states.on('change', function() {
             var stateIds = $(this).val();
             if (!stateIds || !stateIds.length) {
                 $cities.html('<option value="">-- Select state first --</option>').trigger('change');
-                $('#state-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> State select karein');
+                $('#state-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select state');
                 return;
             }
             

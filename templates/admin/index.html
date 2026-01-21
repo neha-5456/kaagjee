@@ -1,0 +1,325 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.2s;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.card-header {
+    background: var(--sidebar-bg);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.card-icon {
+    font-size: 24px;
+    opacity: 0.9;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: white;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.card-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    text-decoration: none;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.15s;
+    color: #374151;
+}
+
+.card-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #1f2937;
+    text-decoration: none;
+}
+
+.card-btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.card-btn.primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.recent-activity {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.activity-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: white;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1f2937;
+    margin: 0 0 2px 0;
+}
+
+.activity-time {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+/* Override default admin styles for dashboard */
+body.kaagjee-admin .dashboard #content-main {
+    display: block !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="dashboard">
+    <h1>Dashboard</h1>
+    
+    <div class="dashboard-cards">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">👤</span>
+                <h3 class="card-title">Users</h3>
+            </div>
+            <div class="card-body">
+                <div class="card-stats">
+                    <div>
+                        <div class="stat-number">{{ user_count|default:0 }}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a href="/admin/accounts/user/" class="card-btn">View All</a>
+                    <a href="/admin/accounts/user/add/" class="card-btn primary">Add User</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📦</span>
+                <h3 class="card-title">Products</h3>
+            </div>
+            <div class="card-body">
+                <div class="card-stats">
+                    <div>
+                        <div class="stat-number">{{ product_count|default:0 }}</div>
+                        <div class="stat-label">Total Products</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a href="/admin/products/product/" class="card-btn">View All</a>
+                    <a href="/admin/products/product/add/" class="card-btn primary">Add Product</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🛒</span>
+                <h3 class="card-title">Orders</h3>
+            </div>
+            <div class="card-body">
+                <div class="card-stats">
+                    <div>
+                        <div class="stat-number">{{ order_count|default:0 }}</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a href="/admin/orders/order/" class="card-btn">View All</a>
+                    <a href="/admin/orders/order/add/" class="card-btn primary">Add Order</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📁</span>
+                <h3 class="card-title">Categories</h3>
+            </div>
+            <div class="card-body">
+                <div class="card-stats">
+                    <div>
+                        <div class="stat-number">{{ category_count|default:0 }}</div>
+                        <div class="stat-label">Total Categories</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a href="/admin/categories/category/" class="card-btn">View All</a>
+                    <a href="/admin/categories/category/add/" class="card-btn primary">Add Category</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🗺️</span>
+                <h3 class="card-title">Locations</h3>
+            </div>
+            <div class="card-body">
+                <div class="card-stats">
+                    <div>
+                        <div class="stat-number">{{ state_count|default:0 }}</div>
+                        <div class="stat-label">States</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a href="/admin/locations/state/" class="card-btn">States</a>
+                    <a href="/admin/locations/city/" class="card-btn">Cities</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📰</span>
+                <h3 class="card-title">Blog</h3>
+            </div>
+            <div class="card-body">
+                <div class="card-stats">
+                    <div>
+                        <div class="stat-number">{{ blog_count|default:0 }}</div>
+                        <div class="stat-label">Blog Posts</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a href="/admin/blog/blogpost/" class="card-btn">View All</a>
+                    <a href="/admin/blog/blogpost/add/" class="card-btn primary">Add Post</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="recent-activity">
+        <div class="activity-header">
+            <span style="font-size: 20px;">📊</span>
+            <h3 style="margin: 0; font-size: 16px; color: #1f2937;">Recent Activity</h3>
+        </div>
+        
+        <div class="activity-item">
+            <div class="activity-icon" style="background: var(--success);">👤</div>
+            <div class="activity-content">
+                <div class="activity-title">{{ recent_users|default:0 }} new users registered</div>
+                <div class="activity-time">Last 7 days</div>
+            </div>
+        </div>
+        
+        <div class="activity-item">
+            <div class="activity-icon" style="background: var(--primary);">📦</div>
+            <div class="activity-content">
+                <div class="activity-title">{{ recent_products|default:0 }} products added</div>
+                <div class="activity-time">Last 7 days</div>
+            </div>
+        </div>
+        
+        <div class="activity-item">
+            <div class="activity-icon" style="background: var(--warning);">🛒</div>
+            <div class="activity-content">
+                <div class="activity-title">{{ recent_orders|default:0 }} new orders received</div>
+                <div class="activity-time">Last 7 days</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -10,7 +10,6 @@ class State(models.Model):
     """Indian State Model"""
     
     name = models.CharField(max_length=100)
-    # name_hi = models.CharField(max_length=100, blank=True, verbose_name='Name (Hindi)')
     slug = models.SlugField(unique=True)
     code = models.CharField(max_length=5, unique=True, help_text='State code like MH, DL, KA')
     is_active = models.BooleanField(default=True)
@@ -40,7 +39,6 @@ class City(models.Model):
 
     state = models.ForeignKey(State, on_delete=models.CASCADE, related_name='cities')
     name = models.CharField(max_length=100)
-    # name_hi = models.CharField(max_length=100, blank=True, verbose_name='Name (Hindi)')
     slug = models.SlugField()
     tier = models.CharField(max_length=10, choices=Tier.choices, default=Tier.TIER_2)
     is_popular = models.BooleanField(default=False)

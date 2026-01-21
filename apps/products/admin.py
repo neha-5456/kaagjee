@@ -65,11 +65,11 @@ class ProductAdmin(admin.ModelAdmin):
         }),
         ('📁 Category', {
             'fields': ('category', 'subcategory'),
-            'description': '<div style="background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> Pehle Category select karein, phir Subcategory automatically filter ho jayegi!</div>'
+            'description': '<div style="background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> First select Category, then Subcategory will be automatically filtered!</div>'
         }),
         ('📍 Location', {
             'fields': ('is_pan_india', 'available_states', 'available_cities'),
-            'description': '<div style="background:#fef3c7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> Pehle State select karein, phir City automatically filter ho jayegi!</div>'
+            'description': '<div style="background:#fef3c7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> First select State, then City will be automatically filtered!</div>'
         }),
         ('💰 Pricing', {
             'fields': ('full_price', 'half_price', 'original_price', 'allow_half_payment'),

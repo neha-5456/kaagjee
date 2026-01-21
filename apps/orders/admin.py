@@ -33,10 +33,10 @@ class OrderAdmin(admin.ModelAdmin):
         ('Order Info', {
             'fields': ('order_number', 'user', 'status')
         }),
-        ('Amounts / राशि', {
+        ('Amounts', {
             'fields': ('subtotal', 'discount', 'total_amount', 'amount_paid')
         }),
-        ('Customer Info / ग्राहक जानकारी', {
+        ('Customer Info', {
             'fields': ('customer_name', 'customer_email', 'customer_phone', 'customer_notes')
         }),
         ('Timestamps', {

@@ -10,7 +10,6 @@ class Category(models.Model):
     """Main Category Model"""
     
     name = models.CharField(max_length=200)
-    name_hi = models.CharField(max_length=200, blank=True, verbose_name='Name (Hindi)')
     slug = models.SlugField(unique=True)
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=100, blank=True, help_text='Font Awesome icon class e.g., fa-file-alt')
@@ -48,7 +47,6 @@ class Subcategory(models.Model):
     
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
     name = models.CharField(max_length=200)
-    name_hi = models.CharField(max_length=200, blank=True, verbose_name='Name (Hindi)')
     slug = models.SlugField()
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=100, blank=True)

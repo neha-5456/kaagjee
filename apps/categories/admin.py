@@ -9,7 +9,7 @@ class SubcategoryInline(admin.TabularInline):
     model = Subcategory
     extra = 2
     prepopulated_fields = {'slug': ('name',)}
-    fields = ['name', 'name_hi', 'slug', 'icon', 'is_active', 'display_order']
+    fields = ['name', 'slug', 'icon', 'is_active', 'display_order']
 
 
 @admin.register(Category)
@@ -17,18 +17,18 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'subcategories_count', 'products_count', 'is_featured', 'is_active', 'display_order']
     list_filter = ['is_featured', 'is_active']
     list_editable = ['is_featured', 'is_active', 'display_order']
-    search_fields = ['name', 'name_hi']
+    search_fields = ['name']
     prepopulated_fields = {'slug': ('name',)}
     inlines = [SubcategoryInline]
     
     fieldsets = (
-        ('Basic Info / बेसिक जानकारी', {
-            'fields': ('name', 'name_hi', 'slug', 'description')
+        ('Basic Info', {
+            'fields': ('name', 'slug', 'description')
         }),
-        ('Appearance / दिखावट', {
+        ('Appearance', {
             'fields': ('icon', 'image')
         }),
-        ('Settings / सेटिंग्स', {
+        ('Settings', {
             'fields': ('is_featured', 'is_active', 'display_order')
         }),
         ('SEO (Optional)', {
