@@ -264,15 +264,25 @@ class SubmitFormWithFilesView(APIView):
         uploaded_files = {}
         submission_uuid = uuid_lib.uuid4().hex[:12]
         
-        for key, file in request.FILES.items():
-            if key.startswith('file_'):
-                field_name = key[5:]
+        # Process all uploaded files
+        for key, file_list in request.FILES.lists():
+            field_name = key[5:] if key.startswith('file_') else key
+            
+            saved_files = []
+            for file in file_list:
                 ext = os.path.splitext(file.name)[1]
-                filename = f"{submission_uuid}_{field_name}{ext}"
+                filename = f"{submission_uuid}_{field_name}_{file.name}"
                 path = f"submissions/{product.slug}/{filename}"
                 saved_path = default_storage.save(path, ContentFile(file.read()))
-                uploaded_files[field_name] = saved_path
-                form_data[field_name] = saved_path
+                saved_files.append(saved_path)
+            
+            # Store as single file or array based on count
+            if len(saved_files) == 1:
+                uploaded_files[field_name] = saved_files[0]
+                form_data[field_name] = saved_files[0]
+            else:
+                uploaded_files[field_name] = saved_files
+                form_data[field_name] = saved_files
         
         # Create submission
         submission = FormSubmission.objects.create(

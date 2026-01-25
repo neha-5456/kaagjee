@@ -66,7 +66,7 @@ class FormSubmission(models.Model):
         verbose_name_plural = 'Form Submissions'
     
     def __str__(self):
-        return f"{self.product.title} - {self.user.phone} ({self.submission_id})"
+        return f"{self.product.title} - {self.user.phone_number} ({self.submission_id})"
     
     def save(self, *args, **kwargs):
         if not self.price_at_submission:
@@ -85,7 +85,7 @@ class Cart(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Cart - {self.user.phone}"
+        return f"Cart - {self.user.phone_number}"
     
     @property
     def total_items(self):
@@ -185,7 +185,7 @@ class Order(models.Model):
         verbose_name_plural = 'Orders'
     
     def __str__(self):
-        return f"Order {self.order_id} - {self.user.phone}"
+        return f"Order {self.order_id} - {self.user.phone_number}"
     
     def save(self, *args, **kwargs):
         if not self.order_id:
