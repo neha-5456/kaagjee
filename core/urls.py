@@ -18,11 +18,12 @@ urlpatterns = [
     
     # API v1
     path('api/v1/auth/', include('apps.accounts.urls')),
+    path('api/v1/about-us/', include('apps.about.urls')),
     path('api/v1/locations/', include('apps.locations.urls')),
     path('api/v1/categories/', include('apps.categories.urls')),
     path('api/v1/products/', include('apps.products.urls')),
-    path('api/v1/orders/', include('apps.orders.urls')),
-    path('api/v1/payments/', include('apps.payments.urls')),
+    path('api/orders/', include('apps.orders.urls')),
+    # path('api/v1/payments/', include('apps.payments.urls')),
     path('api/v1/blog/', include('apps.blog.urls')),
     path('api/v1/banners/', include('apps.banner.urls')),
     

@@ -6,7 +6,7 @@ Products/Services with Dynamic Form Builder
 from django.db import models
 from apps.categories.models import Category, Subcategory
 from apps.locations.models import State, City
-
+from ckeditor.fields import RichTextField
 
 class Product(models.Model):
     """Product/Service Model with Dynamic Form Schema"""
@@ -23,6 +23,7 @@ class Product(models.Model):
     title = models.CharField(max_length=300, verbose_name='Product Title')
     slug = models.SlugField(unique=True, max_length=350)
     short_description = models.CharField(max_length=500, blank=True, verbose_name='Short Description')
+    
     description = models.TextField(blank=True, verbose_name='Full Description', 
                                    help_text='Supports HTML formatting')
     featured_image = models.ImageField(upload_to='products/', null=True, blank=True, verbose_name='Featured Image')

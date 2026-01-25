@@ -31,10 +31,10 @@ class CategoryAdmin(admin.ModelAdmin):
         ('Settings', {
             'fields': ('is_featured', 'is_active', 'display_order')
         }),
-        ('SEO (Optional)', {
-            'fields': ('meta_title', 'meta_description'),
-            'classes': ('collapse',)
-        }),
+        # ('SEO (Optional)', {
+        #     'fields': ('meta_title', 'meta_description'),
+        #     'classes': ('collapse',)
+        # }),
     )
 
 

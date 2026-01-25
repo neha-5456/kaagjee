@@ -24,7 +24,7 @@ class SubcategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subcategory
-        fields = ['id', 'name', 'name_hi', 'slug', 'description', 'icon', 'products_count']
+        fields = ['id', 'name', 'slug', 'description', 'icon', 'products_count']
 
     def get_products_count(self, obj):
         # Check if annotated value exists (for filtered queries)
@@ -40,7 +40,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'name_hi', 'slug', 'description', 'icon', 'image', 
+        fields = ['id', 'name', 'slug', 'description', 'icon', 'image', 
                   'is_featured', 'subcategories_count', 'products_count']
 
     def get_subcategories_count(self, obj):
@@ -68,7 +68,7 @@ class CategoryWithSubcategoriesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'name_hi', 'slug', 'description', 'icon', 'image', 
+        fields = ['id', 'name',  'slug', 'description', 'icon', 'image', 
                   'is_featured', 'products_count', 'subcategories']
 
     def get_products_count(self, obj):

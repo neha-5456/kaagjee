@@ -33,16 +33,19 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_spectacular',
     'phonenumber_field',
-    
+    'ckeditor',
     # Local Apps
     'apps.accounts',
     'apps.locations',
     'apps.categories',
     'apps.products',
     'apps.orders',
-    'apps.payments',
+    # 'apps.payments',
     'apps.blog',
     'apps.banner',
+    'apps.about',
+    'apps.policy',
+    'apps.privacy',
 ]
 
 # =============================================
