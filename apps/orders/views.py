@@ -24,6 +24,13 @@ from .models import FormSubmission, Cart, CartItem, Order, OrderItem, Payment
 from apps.products.models import Product
 
 
+import os
+import uuid
+from datetime import datetime
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from rest_framework.parsers import MultiPartParser, FormParser
 # ========================
 # RAZORPAY CLIENT
 # ========================
@@ -855,3 +862,314 @@ class MySubmissionsView(generics.ListAPIView):
             'count': len(serializer.data),
             'data': serializer.data
         })
+
+
+
+
+class FileUploadView(APIView):
+    """
+    Upload single file and get server path
+    
+    POST /api/orders/upload-file/
+    
+    Headers:
+        Authorization: Bearer <token>
+        Content-Type: multipart/form-data
+    
+    Form Data:
+        - file: The file to upload (required)
+        - folder: Custom folder name (optional, default: 'uploads')
+        - prefix: Filename prefix (optional, e.g., 'passport', 'aadhaar')
+    
+    Response:
+        {
+            "success": true,
+            "message": "File uploaded successfully",
+            "data": {
+                "file_path": "uploads/mobile/abc123_passport_document.pdf",
+                "file_url": "/media/uploads/mobile/abc123_passport_document.pdf",
+                "file_name": "abc123_passport_document.pdf",
+                "original_name": "document.pdf",
+                "file_size": 1024,
+                "content_type": "application/pdf"
+            }
+        }
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    # Allowed file extensions
+    ALLOWED_EXTENSIONS = [
+        # Images
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg',
+        # Documents
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+        '.txt', '.rtf', '.odt', '.ods', '.odp',
+        # Others
+        '.zip', '.rar', '.7z'
+    ]
+    
+    # Max file size: 10MB
+    MAX_FILE_SIZE = 10 * 1024 * 1024
+    
+    def post(self, request):
+        # Get file from request
+        file = request.FILES.get('file')
+        
+        if not file:
+            return Response({
+                'success': False,
+                'error': 'No file provided',
+                'message': 'Please send a file with key "file"'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate file size
+        if file.size > self.MAX_FILE_SIZE:
+            return Response({
+                'success': False,
+                'error': 'File too large',
+                'message': f'Maximum file size is {self.MAX_FILE_SIZE // (1024*1024)}MB'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate file extension
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext not in self.ALLOWED_EXTENSIONS:
+            return Response({
+                'success': False,
+                'error': 'Invalid file type',
+                'message': f'Allowed types: {", ".join(self.ALLOWED_EXTENSIONS)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get optional parameters
+        folder = request.data.get('folder', 'mobile')
+        prefix = request.data.get('prefix', '')
+        
+        # Generate unique filename
+        unique_id = uuid.uuid4().hex[:12]
+        timestamp = datetime.now().strftime('%Y%m%d')
+        original_name = os.path.splitext(file.name)[0]
+        
+        # Clean original name (remove special chars)
+        clean_name = ''.join(c for c in original_name if c.isalnum() or c in '-_')[:30]
+        
+        # Build filename
+        if prefix:
+            filename = f"{unique_id}_{prefix}_{clean_name}{ext}"
+        else:
+            filename = f"{unique_id}_{timestamp}_{clean_name}{ext}"
+        
+        # Build full path
+        file_path = f"uploads/{folder}/{filename}"
+        
+        # Save file
+        try:
+            saved_path = default_storage.save(file_path, ContentFile(file.read()))
+            file_url = f"{settings.MEDIA_URL}{saved_path}"
+            
+            return Response({
+                'success': True,
+                'message': 'File uploaded successfully',
+                'data': {
+                    'file_path': saved_path,
+                    'file_url': file_url,
+                    'file_name': filename,
+                    'original_name': file.name,
+                    'file_size': file.size,
+                    'content_type': file.content_type
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Upload failed',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MultipleFilesUploadView(APIView):
+    """
+    Upload multiple files and get server paths
+    
+    POST /api/orders/upload-files/
+    
+    Headers:
+        Authorization: Bearer <token>
+        Content-Type: multipart/form-data
+    
+    Form Data:
+        - files: Multiple files (required)
+        - folder: Custom folder name (optional, default: 'mobile')
+        - prefix: Filename prefix (optional)
+    
+    Response:
+        {
+            "success": true,
+            "message": "3 files uploaded successfully",
+            "data": {
+                "uploaded_files": [
+                    {
+                        "file_path": "uploads/mobile/abc123_doc1.pdf",
+                        "file_url": "/media/uploads/mobile/abc123_doc1.pdf",
+                        "file_name": "abc123_doc1.pdf",
+                        "original_name": "doc1.pdf"
+                    },
+                    ...
+                ],
+                "total_uploaded": 3,
+                "total_size": 3072
+            }
+        }
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    ALLOWED_EXTENSIONS = [
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg',
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+        '.txt', '.rtf', '.odt', '.ods', '.odp',
+        '.zip', '.rar', '.7z'
+    ]
+    MAX_FILE_SIZE = 10 * 1024 * 1024
+    MAX_FILES = 10
+    
+    def post(self, request):
+        # Get files - can be sent as 'files' or 'files[]' or multiple 'file' keys
+        files = request.FILES.getlist('files') or request.FILES.getlist('files[]')
+        
+        # Also check for individual file keys (file_0, file_1, etc.)
+        if not files:
+            for key in request.FILES:
+                if key.startswith('file'):
+                    files.extend(request.FILES.getlist(key))
+        
+        if not files:
+            return Response({
+                'success': False,
+                'error': 'No files provided',
+                'message': 'Please send files with key "files" or "files[]"'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(files) > self.MAX_FILES:
+            return Response({
+                'success': False,
+                'error': 'Too many files',
+                'message': f'Maximum {self.MAX_FILES} files allowed at once'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get optional parameters
+        folder = request.data.get('folder', 'mobile')
+        prefix = request.data.get('prefix', '')
+        
+        # Generate unique batch ID
+        batch_id = uuid.uuid4().hex[:8]
+        
+        uploaded_files = []
+        errors = []
+        total_size = 0
+        
+        for idx, file in enumerate(files):
+            # Validate file size
+            if file.size > self.MAX_FILE_SIZE:
+                errors.append(f"{file.name}: File too large (max {self.MAX_FILE_SIZE // (1024*1024)}MB)")
+                continue
+            
+            # Validate extension
+            ext = os.path.splitext(file.name)[1].lower()
+            if ext not in self.ALLOWED_EXTENSIONS:
+                errors.append(f"{file.name}: Invalid file type")
+                continue
+            
+            # Generate filename
+            original_name = os.path.splitext(file.name)[0]
+            clean_name = ''.join(c for c in original_name if c.isalnum() or c in '-_')[:30]
+            
+            if prefix:
+                filename = f"{batch_id}_{prefix}_{idx}_{clean_name}{ext}"
+            else:
+                filename = f"{batch_id}_{idx}_{clean_name}{ext}"
+            
+            file_path = f"uploads/{folder}/{filename}"
+            
+            try:
+                saved_path = default_storage.save(file_path, ContentFile(file.read()))
+                file_url = f"{settings.MEDIA_URL}{saved_path}"
+                
+                uploaded_files.append({
+                    'file_path': saved_path,
+                    'file_url': file_url,
+                    'file_name': filename,
+                    'original_name': file.name,
+                    'file_size': file.size,
+                    'content_type': file.content_type
+                })
+                total_size += file.size
+                
+            except Exception as e:
+                errors.append(f"{file.name}: {str(e)}")
+        
+        if not uploaded_files:
+            return Response({
+                'success': False,
+                'error': 'No files uploaded',
+                'errors': errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'success': True,
+            'message': f'{len(uploaded_files)} file(s) uploaded successfully',
+            'data': {
+                'uploaded_files': uploaded_files,
+                'total_uploaded': len(uploaded_files),
+                'total_size': total_size,
+                'batch_id': batch_id
+            },
+            'errors': errors if errors else None
+        }, status=status.HTTP_201_CREATED)
+
+
+class DeleteUploadedFileView(APIView):
+    """
+    Delete an uploaded file (optional - for cleanup)
+    
+    DELETE /api/orders/delete-file/
+    
+    Body:
+        {"file_path": "uploads/mobile/abc123_doc.pdf"}
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request):
+        file_path = request.data.get('file_path')
+        
+        if not file_path:
+            return Response({
+                'success': False,
+                'error': 'file_path required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Security: Only allow deletion from uploads folder
+        if not file_path.startswith('uploads/'):
+            return Response({
+                'success': False,
+                'error': 'Invalid file path'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            if default_storage.exists(file_path):
+                default_storage.delete(file_path)
+                return Response({
+                    'success': True,
+                    'message': 'File deleted successfully'
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'error': 'File not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

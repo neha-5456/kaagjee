@@ -15,6 +15,10 @@ urlpatterns = [
     path('submit-form-files/', views.SubmitFormWithFilesView.as_view(), name='submit-form-files'),
     path('my-submissions/', views.MySubmissionsView.as_view(), name='my-submissions'),
     
+    path('upload-file/', views.FileUploadView.as_view(), name='upload-file'),
+    path('upload-files/', views.MultipleFilesUploadView.as_view(), name='upload-files'),
+    path('delete-file/', views.DeleteUploadedFileView.as_view(), name='delete-file'),
+    
     # ========================
     # CART
     # ========================
