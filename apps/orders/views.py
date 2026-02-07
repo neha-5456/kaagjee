@@ -438,7 +438,7 @@ class CheckoutView(APIView):
         payment_type = request.data.get('payment_type', 'full')
         user_name = request.data.get('user_name', getattr(request.user, 'full_name', ''))
         user_email = request.data.get('user_email', getattr(request.user, 'email', ''))
-        user_phone = request.data.get('user_phone', str(request.user.phone))
+        user_phone = request.data.get('user_phone', getattr(request.user, 'phone', ''))
         user_notes = request.data.get('user_notes', '')
         
         # Validate payment type

@@ -178,11 +178,11 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# =============================================
+# ============================================= s
 # RAZORPAY SETTINGS
 # =============================================
-RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '')
-RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_SDBMuIX146Wc5D')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'YczOWuZoxoKXVO08cVMvs8wg')
 
 # =============================================
 # OTP SETTINGS
