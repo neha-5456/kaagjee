@@ -47,7 +47,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'title', 'slug', 'short_description','description', 'featured_image',
-            'category', 'category_name', 'category_slug',
+            'category', 'category_name', 'category_slug','youtube_link',
             'subcategory', 'subcategory_name', 'subcategory_slug',
             'full_price', 'half_price', 'original_price', 'discount_percentage',
             'allow_half_payment', 'status', 'is_featured', 'is_popular',
@@ -92,7 +92,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'title', 'slug', 'short_description', 'description', 'featured_image',
-            'category', 'category_name', 'category_slug',
+            'category', 'category_name', 'category_slug','youtube_link',
             'subcategory', 'subcategory_name', 'subcategory_slug',
             'is_pan_india', 'available_states', 'available_cities',
             'available_states_data', 'available_cities_data',
