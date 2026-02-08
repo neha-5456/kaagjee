@@ -121,7 +121,7 @@ class LoginVerifySerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'phone_number', 'email', 'first_name', 'last_name', 'avatar', 'role', 'is_verified', 'date_joined']
+        fields = ['id', 'phone_number', 'email', 'first_name', 'last_name', 'avatar', 'role', 'address', 'dob', 'gender',  'is_verified', 'date_joined']
         read_only_fields = ['id', 'phone_number', 'role', 'is_verified', 'date_joined']
 
 

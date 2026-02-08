@@ -318,6 +318,73 @@ class SubmitFormWithFilesView(APIView):
                 'cart_items_count': cart.total_items
             }
         }, status=201)
+    
+    @transaction.atomic
+    def put(self, request):
+        import json
+        import os
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+
+        submission_id = request.data.get('submission_id')
+
+        if not submission_id:
+            return Response(
+                {'success': False, 'error': 'submission_id is required'},
+                status=400
+            )
+
+        try:
+            submission = FormSubmission.objects.get(
+                id=submission_id,
+                user=request.user,
+                status=FormSubmission.Status.IN_CART
+            )
+        except FormSubmission.DoesNotExist:
+            return Response(
+                {'success': False, 'error': 'Submission not found or not editable'},
+                status=404
+            )
+
+        # Existing data
+        form_data = submission.form_data or {}
+        uploaded_files = submission.uploaded_files or {}
+
+        # Update form_data
+        try:
+            incoming_form_data = json.loads(request.data.get('form_data', '{}'))
+            form_data.update(incoming_form_data)
+        except:
+            pass
+
+        # Handle new uploaded files
+        for key, file_list in request.FILES.lists():
+            field_name = key[5:] if key.startswith('file_') else key
+            saved_files = []
+
+            for file in file_list:
+                filename = f"{submission.id}_{field_name}_{file.name}"
+                path = f"submissions/{submission.product.slug}/{filename}"
+                saved_path = default_storage.save(path, ContentFile(file.read()))
+                saved_files.append(saved_path)
+
+            # single vs multiple
+            if len(saved_files) == 1:
+                uploaded_files[field_name] = saved_files[0]
+                form_data[field_name] = saved_files[0]
+            else:
+                uploaded_files[field_name] = saved_files
+                form_data[field_name] = saved_files
+
+        submission.form_data = form_data
+        submission.uploaded_files = uploaded_files
+        submission.save(update_fields=['form_data', 'uploaded_files'])
+
+        return Response({
+            'success': True,
+            'message': 'Form updated successfully',
+            'data': FormSubmissionSerializer(submission).data
+        }, status=200)
 
 
 # ========================

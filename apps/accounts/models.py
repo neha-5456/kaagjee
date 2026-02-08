@@ -47,6 +47,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = PhoneNumberField(unique=True, verbose_name='Phone Number')
     email = models.EmailField(unique=True, null=True, blank=True)
     
+    address  = models.CharField(max_length=500, blank=True)
+    dob = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=20, null=True, blank=True)
     # Profile
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
@@ -57,6 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False, verbose_name='Phone Verified')
+    
     
     # Timestamps
     date_joined = models.DateTimeField(auto_now_add=True)
