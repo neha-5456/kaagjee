@@ -30,17 +30,6 @@ class RegisterRequestView(APIView):
         
         phone_number = serializer.validated_data['phone_number']
         
-        # Debug: Print registration data to check if it's being stored
-        registration_data = {
-            'first_name': serializer.validated_data.get('first_name', ''),
-            'last_name': serializer.validated_data.get('last_name', ''),
-            'email': serializer.validated_data.get('email', '')
-        }
-        print(f"Storing registration data: {registration_data}")
-        
-        # Store registration data in session for temporary storage
-        request.session[f'registration_data_{phone_number}'] = registration_data
-        
         # Generate and send OTP
         otp = OTP.generate(phone_number, OTP.Purpose.REGISTRATION)
         
@@ -74,30 +63,15 @@ class RegisterVerifyView(APIView):
         otp.is_verified = True
         otp.save()
         
-        # Get registration data from session
-        phone_number = serializer.validated_data['phone_number']
-        registration_data = request.session.get(f'registration_data_{phone_number}', {})
-        
-        # Debug: Print retrieved data
-        print(f"Retrieved registration data: {registration_data}")
-        
-        # Create user with stored registration data
-        user_data = {
-            'phone_number': phone_number,
-            'first_name': registration_data.get('first_name', ''),
-            'last_name': registration_data.get('last_name', ''),
-            'email': registration_data.get('email', ''),
-            'is_verified': True,
-            'is_active': True
-        }
-        
-        # Debug: Print user data before creation
-        print(f"Creating user with data: {user_data}")
-        
-        user = User.objects.create_user(**user_data)
-        
-        # Clean up session data
-        request.session.pop(f'registration_data_{phone_number}', None)
+        # Create user with data from verify request
+        user = User.objects.create_user(
+            phone_number=serializer.validated_data['phone_number'],
+            first_name=serializer.validated_data['first_name'],
+            last_name=serializer.validated_data['last_name'],
+            email=serializer.validated_data['email'],
+            is_verified=True,
+            is_active=True
+        )
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)

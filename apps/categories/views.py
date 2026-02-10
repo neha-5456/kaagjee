@@ -152,30 +152,19 @@ class CategoryListView(generics.ListAPIView):
         product_filter = Q(products__status='active')
         has_location_filter = False
         
-        if state_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_states__id=state_id)
-            )
-            has_location_filter = True
-        elif state_code:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_states__code__iexact=state_code)
-            )
-            has_location_filter = True
-        
         if city_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_cities__id=city_id)
-            )
+            # City filter - only products explicitly in this city
+            product_filter &= Q(products__available_cities__id=city_id)
             has_location_filter = True
         elif city_slug:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_cities__slug=city_slug)
-            )
+            product_filter &= Q(products__available_cities__slug=city_slug)
+            has_location_filter = True
+        elif state_id:
+            # Only state filter if no city
+            product_filter &= Q(products__available_states__id=state_id)
+            has_location_filter = True
+        elif state_code:
+            product_filter &= Q(products__available_states__code__iexact=state_code)
             has_location_filter = True
         
         if has_location_filter:
@@ -195,6 +184,8 @@ class CategoryListView(generics.ListAPIView):
                     distinct=True
                 )
             )
+            # Exclude categories with 0 products in the location
+            qs = qs.filter(filtered_products_count__gt=0)
         else:
             # No location filter - annotate with default counts
             qs = qs.annotate(
@@ -249,18 +240,11 @@ class FeaturedCategoriesView(generics.ListAPIView):
         product_filter = Q(products__status='active')
         has_location_filter = False
         
-        if state_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_states__id=state_id)
-            )
-            has_location_filter = True
-        
         if city_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_cities__id=city_id)
-            )
+            product_filter &= Q(products__available_cities__id=city_id)
+            has_location_filter = True
+        elif state_id:
+            product_filter &= Q(products__available_states__id=state_id)
             has_location_filter = True
         
         if has_location_filter:
@@ -269,6 +253,8 @@ class FeaturedCategoriesView(generics.ListAPIView):
                 filtered_products_count=Count('products', filter=product_filter, distinct=True),
                 filtered_subcategories_count=Count('subcategories', filter=Q(subcategories__is_active=True), distinct=True)
             )
+            # Exclude categories with 0 products in the location
+            qs = qs.filter(filtered_products_count__gt=0)
         else:
             qs = qs.annotate(
                 filtered_products_count=Count('products', filter=Q(products__status='active'), distinct=True),
@@ -351,24 +337,14 @@ class SubcategoryListView(generics.ListAPIView):
         product_filter = Q(products__status='active')
         has_location_filter = False
         
-        if state_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_states__id=state_id)
-            )
+        if city_id:
+            product_filter &= Q(products__available_cities__id=city_id)
+            has_location_filter = True
+        elif state_id:
+            product_filter &= Q(products__available_states__id=state_id)
             has_location_filter = True
         elif state_code:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_states__code__iexact=state_code)
-            )
-            has_location_filter = True
-        
-        if city_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) | 
-                Q(products__available_cities__id=city_id)
-            )
+            product_filter &= Q(products__available_states__code__iexact=state_code)
             has_location_filter = True
         
         if has_location_filter:
@@ -376,6 +352,8 @@ class SubcategoryListView(generics.ListAPIView):
             qs = qs.annotate(
                 filtered_products_count=Count('products', filter=product_filter, distinct=True)
             )
+            # Exclude subcategories with 0 products in the location
+            qs = qs.filter(filtered_products_count__gt=0)
         else:
             qs = qs.annotate(
                 filtered_products_count=Count('products', filter=Q(products__status='active'))
@@ -428,22 +406,12 @@ class CategoriesWithProductsView(APIView):
         # Build product filter
         product_filter = Q(status='active')
         
-        if state_id:
-            product_filter &= (
-                Q(is_pan_india=True) | 
-                Q(available_states__id=state_id)
-            )
-        elif state_code:
-            product_filter &= (
-                Q(is_pan_india=True) | 
-                Q(available_states__code__iexact=state_code)
-            )
-        
         if city_id:
-            product_filter &= (
-                Q(is_pan_india=True) | 
-                Q(available_cities__id=city_id)
-            )
+            product_filter &= Q(available_cities__id=city_id)
+        elif state_id:
+            product_filter &= Q(available_states__id=state_id)
+        elif state_code:
+            product_filter &= Q(available_states__code__iexact=state_code)
         
         # Get products matching the filter
         products = Product.objects.filter(product_filter).distinct()

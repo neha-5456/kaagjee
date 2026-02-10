@@ -38,6 +38,9 @@ class RegisterVerifySerializer(serializers.Serializer):
     """Serializer for OTP verification during registration"""
     phone_number = serializers.CharField(max_length=15)
     otp_code = serializers.CharField(max_length=6)
+    first_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100)
+    email = serializers.EmailField()
 
     def validate(self, data):
         phone = data.get('phone_number')
