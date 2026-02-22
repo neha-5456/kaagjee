@@ -42,6 +42,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     form_fields_count = serializers.SerializerMethodField()
     available_states_list = serializers.SerializerMethodField()
     available_cities_list = serializers.SerializerMethodField()
+    faqs = ProductFAQSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -52,7 +53,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             'full_price', 'half_price', 'original_price', 'discount_percentage',
             'allow_half_payment', 'status', 'is_featured', 'is_popular',
             'is_pan_india', 'available_states_list', 'available_cities_list',
-            'processing_time', 'form_fields_count', 'orders_count'
+            'processing_time', 'documents_required', 'how_its_work', 'form_fields_count', 'orders_count','data_privacy_policy',
+            'faqs'
         ]
 
     def get_discount_percentage(self, obj):
@@ -182,7 +184,7 @@ class ProductListView(generics.ListAPIView):
         qs = Product.objects.filter(
             status=Product.Status.ACTIVE
         ).select_related('category', 'subcategory').prefetch_related(
-            'available_states', 'available_cities'
+            'available_states', 'available_cities', 'faqs'
         )
         
         params = self.request.query_params

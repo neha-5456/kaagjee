@@ -88,7 +88,12 @@ class Product(models.Model):
     processing_time = models.CharField(max_length=100, blank=True, 
                                        verbose_name='Processing Time',
                                        help_text='e.g., 3-5 working days')
-    documents_required = models.TextField(blank=True, verbose_name='Documents Required')
+    documents_required = RichTextField(blank=True, verbose_name='Documents Required')
+    how_its_work = RichTextField(blank=True, verbose_name='How It Works')
+    data_privacy_policy = RichTextField(blank=True, verbose_name='Data Privacy Policy')
+    # documents_required = models.TextField(blank=True, verbose_name='Documents Required')
+    # how_its_work = models.TextField(blank=True, verbose_name='How It Works')
+    # data_privacy_policy = models.TextField(blank=True, verbose_name='Data Privacy Policy')
 
     # ========================
     # STATS

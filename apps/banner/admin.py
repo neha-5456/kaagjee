@@ -8,16 +8,20 @@ from .models import Banner
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
-    list_display = ['title', 'image_preview', 'is_active', 'display_order', 'created_at']
+    list_display = ['title', 'image_preview', 'product_name', 'is_active', 'display_order', 'created_at']
     list_filter = ['is_active', 'created_at']
     list_editable = ['is_active', 'display_order']
     search_fields = ['title', 'description']
+    autocomplete_fields = ['Product']
     
-    
-    fields = ['title', 'description', 'image', 'is_active', 'display_order']
+    fields = ['title', 'description', 'Product', 'image', 'is_active', 'display_order']
 
     def image_preview(self, obj):
         if obj.image:
             return format_html('<img src="{}" style="width:80px;height:40px;object-fit:cover;border-radius:5px;"/>', obj.image.url)
         return '-'
     image_preview.short_description = 'Preview'
+    
+    def product_name(self, obj):
+        return obj.Product.title if obj.Product else '-'
+    product_name.short_description = 'Product'

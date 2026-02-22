@@ -55,8 +55,31 @@
     border-radius: 8px !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
 }
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background: #6366f1 !important;
+.select2-container--default .select2-results__option {
+    padding: 8px 12px !important;
+    position: relative !important;
+    padding-left: 35px !important;
+}
+.select2-container--default .select2-results__option:before {
+    content: '☐';
+    position: absolute;
+    left: 10px;
+    font-size: 16px;
+    color: #6b7280;
+}
+.select2-container--default .select2-results__option[aria-selected=true]:before {
+    content: '☑';
+    color: #6366f1;
+    font-weight: bold;
+}
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background: #eef2ff !important;
+    color: #4338ca !important;
+    font-weight: 500 !important;
+}
+.select2-container--default .select2-results__option--highlighted {
+    background: #dbeafe !important;
+    color: #1e40af !important;
 }
 
 /* ===== RICH TEXT EDITOR ===== */
@@ -277,6 +300,63 @@
 .add-option-btn:hover { border-color: #6366f1; color: #6366f1; }
 .empty-fields { text-align: center; padding: 40px; color: #94a3b8; }
 .empty-fields i { font-size: 36px; margin-bottom: 10px; opacity: 0.5; }
+
+/* ===== CHECKBOX GROUP STYLING ===== */
+.custom-dropdown {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 10px;
+}
+.custom-dropdown-btn {
+    border: 1px solid #ccc;
+    padding: 10px;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 4px;
+}
+.custom-dropdown-content {
+    display: none;
+    position: absolute;
+    width: 100%;
+    border: 1px solid #ccc;
+    background: #fff;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 9999;
+    border-radius: 4px;
+    margin-top: 2px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.custom-dropdown-content div {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.custom-dropdown-content div:hover {
+    background-color: #f2f2f2;
+}
+.custom-dropdown-content .checkmark {
+    color: #10b981;
+    font-weight: bold;
+    display: none;
+}
+.custom-dropdown-content .selected .checkmark {
+    display: inline;
+}
+.custom-multi-select {
+    display: none !important;
+}
+.field-available_states,
+.field-available_cities {
+    overflow: visible !important;
+}
+.field-available_states .form-row,
+.field-available_cities .form-row {
+    margin-bottom: 280px;
+}
 </style>
 {% endblock %}
 
@@ -299,6 +379,7 @@
         {type:'phone', icon:'fa-phone', label:'Phone'},
         {type:'number', icon:'fa-hashtag', label:'Number'},
         {type:'date', icon:'fa-calendar', label:'Date'},
+        {type:'price', icon:'fa-rupee-sign', label:'Price'},
         {type:'dropdown', icon:'fa-chevron-down', label:'Dropdown'},
         {type:'checkbox', icon:'fa-check-square', label:'Checkbox'},
         {type:'radio', icon:'fa-circle-dot', label:'Radio'},
@@ -449,25 +530,24 @@
             return;
         }
         
-        console.log('✅ State filter init');
-        var currentCities = $cities.val() || [];
+        console.log('✅ State filter init with custom dropdown');
         
-        // Initialize Select2
-        try {
-            $states.select2({width: '100%', placeholder: '🔍 Select states...', allowClear: true});
-            $cities.select2({width: '100%', placeholder: '🔍 Select cities...', allowClear: true});
-            console.log('✅ Select2 initialized');
-        } catch(e) {
-            console.log('⚠️ Select2 error:', e);
-        }
+        // Create custom dropdown for states
+        createCustomDropdown($states, 'Select States', 'stateDropdown');
         
-        $states.closest('.form-row').append('<div class="cascade-note" id="state-note"><i class="fas fa-info-circle"></i> Select state</div>');
+        // Create custom dropdown for cities
+        createCustomDropdown($cities, 'Select Cities', 'cityDropdown');
         
+        $('.field-available_states').append('<div class="cascade-note" id="state-note"><i class="fas fa-info-circle"></i> Select states to filter cities</div>');
+        
+        // Listen to state changes
         $states.on('change', function() {
             var stateIds = $(this).val();
+            console.log('States changed:', stateIds);
+            
             if (!stateIds || !stateIds.length) {
-                $cities.html('<option value="">-- Select state first --</option>').trigger('change');
-                $('#state-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select state');
+                $('#cityDropdown .custom-dropdown-content > div').show();
+                $('#state-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select states to filter cities');
                 return;
             }
             
@@ -475,17 +555,23 @@
             
             $.get('/admin/products/product/ajax/get-cities/', {state_ids: stateIds.join(',')})
                 .done(function(data) {
-                    $cities.empty();
+                    console.log('Cities data:', data);
                     if (data.cities && data.cities.length) {
-                        data.cities.forEach(function(c) {
-                            var sel = currentCities.indexOf(String(c.id)) > -1 ? ' selected' : '';
-                            var label = c.name + (c.state__code ? ' (' + c.state__code + ')' : '');
-                            $cities.append('<option value="'+c.id+'"'+sel+'>'+label+'</option>');
+                        var cityIds = data.cities.map(function(c) { return String(c.id); });
+                        
+                        // Filter city dropdown options
+                        $('#cityDropdown .custom-dropdown-content > div').each(function() {
+                            var cityId = String($(this).data('value'));
+                            if (cityIds.indexOf(cityId) > -1) {
+                                $(this).show();
+                            } else {
+                                $(this).hide();
+                            }
                         });
-                        $cities.trigger('change');
-                        $('#state-note').removeClass('warning error').addClass('success').html('<i class="fas fa-check-circle"></i> '+data.cities.length+' cities loaded');
+                        
+                        $('#state-note').removeClass('warning error').addClass('success').html('<i class="fas fa-check-circle"></i> ' + data.cities.length + ' cities available');
                     } else {
-                        $cities.html('<option value="">-- No cities found --</option>').trigger('change');
+                        $('#cityDropdown .custom-dropdown-content > div').hide();
                         $('#state-note').removeClass('success error').addClass('warning').html('<i class="fas fa-exclamation-triangle"></i> No cities found');
                     }
                 })
@@ -493,8 +579,53 @@
                     $('#state-note').removeClass('success warning').addClass('error').html('<i class="fas fa-times-circle"></i> Error loading!');
                 });
         });
+    }
+    
+    function createCustomDropdown($select, placeholder, id) {
+        var selectedValues = $select.val() || [];
+        var $wrapper = $('<div class="custom-dropdown" id="' + id + '"></div>');
+        var $btn = $('<div class="custom-dropdown-btn">' + placeholder + '</div>');
+        var $content = $('<div class="custom-dropdown-content"></div>');
         
-        if ($states.val() && $states.val().length) $states.trigger('change');
+        // Add options
+        $select.find('option').each(function() {
+            var value = $(this).val();
+            var text = $(this).text();
+            if (value) {
+                var isSelected = selectedValues.indexOf(value) > -1 ? ' selected' : '';
+                var $option = $('<div class="' + isSelected + '" data-value="' + value + '">' + text + ' <span class="checkmark">✔</span></div>');
+                $content.append($option);
+            }
+        });
+        
+        $wrapper.append($btn).append($content);
+        $select.after($wrapper);
+        
+        // Toggle dropdown
+        $btn.on('click', function(e) {
+            e.stopPropagation();
+            $('.custom-dropdown-content').not($content).hide();
+            $content.toggle();
+        });
+        
+        // Select option
+        $content.on('click', '> div', function() {
+            $(this).toggleClass('selected');
+            
+            // Update hidden select
+            var selected = [];
+            $content.find('.selected').each(function() {
+                selected.push($(this).data('value'));
+            });
+            $select.val(selected).trigger('change');
+            
+            console.log('Dropdown changed for:', id, 'Selected:', selected);
+        });
+        
+        // Close on outside click
+        $(document).on('click', function() {
+            $content.hide();
+        });
     }
     
     // ==================== FORM BUILDER ====================
@@ -667,9 +798,18 @@
         ).addClass('active');
         
         // Bind events
-        $panel.find('.f-label').on('input', function() { updateField(fieldId, 'label', $(this).val()); });
-        $panel.find('.f-placeholder').on('input', function() { updateField(fieldId, 'placeholder', $(this).val()); });
-        $panel.find('.f-help').on('input', function() { updateField(fieldId, 'help_text', $(this).val()); });
+        $panel.find('.f-label').on('input', function() { 
+            var val = $(this).val();
+            setTimeout(function() { updateField(fieldId, 'label', val); }, 300);
+        });
+        $panel.find('.f-placeholder').on('input', function() { 
+            var val = $(this).val();
+            setTimeout(function() { updateField(fieldId, 'placeholder', val); }, 300);
+        });
+        $panel.find('.f-help').on('input', function() { 
+            var val = $(this).val();
+            setTimeout(function() { updateField(fieldId, 'help_text', val); }, 300);
+        });
         $panel.find('.f-required').on('change', function() { updateField(fieldId, 'required', $(this).is(':checked')); });
         $panel.find('.opt-input').on('input', function() { updateOption(fieldId, $(this).data('idx'), $(this).val()); });
         $panel.find('.opt-remove').on('click', function() { removeOption(fieldId, $(this).data('idx')); });
@@ -741,9 +881,11 @@
         f[key] = value;
         if (key === 'label') {
             f.name = value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field';
+            renderFields();
+            showSettings(id);
+        } else {
+            saveSchema();
         }
-        renderFields();
-        if (key === 'label') showSettings(id); // Refresh to show updated ID
     }
     
     function updateValidation(id, key, value) {

@@ -153,14 +153,14 @@ class CategoryListView(generics.ListAPIView):
         has_location_filter = False
         
         if city_id:
-            # City filter - only products explicitly in this city
+            # City filter - products in this city only (not pan india)
             product_filter &= Q(products__available_cities__id=city_id)
             has_location_filter = True
         elif city_slug:
             product_filter &= Q(products__available_cities__slug=city_slug)
             has_location_filter = True
         elif state_id:
-            # Only state filter if no city
+            # Only state filter if no city - products in this state only
             product_filter &= Q(products__available_states__id=state_id)
             has_location_filter = True
         elif state_code:

@@ -25,6 +25,10 @@ class ProductAdminForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = '__all__'
+        widgets = {
+            'available_states': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
+            'available_cities': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
+        }
 
 
 # ========================
@@ -56,7 +60,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_editable = []
     search_fields = ['title', 'short_description']
     prepopulated_fields = {'slug': ('title',)}
-    inlines = [ProductImageInline]
+    inlines = [ProductImageInline, ProductFAQInline]
     save_on_top = True
     
     fieldsets = (
@@ -85,10 +89,10 @@ class ProductAdmin(admin.ModelAdmin):
         #     'fields': ('meta_title', 'meta_description', 'meta_keywords'),
         #     'classes': ('collapse',)
         # }),
-        # ('ℹ️ Additional Info (Optional)', {
-        #     'fields': ('processing_time', 'documents_required'),
-        #     'classes': ('collapse',)
-        # }),
+        ('ℹ️ Additional Info (Optional)', {
+            'fields': ('how_its_work', 'documents_required', 'data_privacy_policy'),
+            'classes': ('collapse',)
+        }),
     )
 
     class Media:
@@ -189,12 +193,12 @@ class ProductImageAdmin(admin.ModelAdmin):
     image_preview.short_description = 'Preview'
 
 
-# @admin.register(ProductFAQ)
-# class ProductFAQAdmin(admin.ModelAdmin):
-#     list_display = ['product', 'question_short', 'is_active', 'display_order']
-#     list_filter = ['product', 'is_active']
-#     list_editable = ['is_active', 'display_order']
+@admin.register(ProductFAQ)
+class ProductFAQAdmin(admin.ModelAdmin):
+    list_display = ['product', 'question_short', 'is_active', 'display_order']
+    list_filter = ['product', 'is_active']
+    list_editable = ['is_active', 'display_order']
     
-#     def question_short(self, obj):
-#         return obj.question[:80] + '...' if len(obj.question) > 80 else obj.question
-#     question_short.short_description = 'Question'
+    def question_short(self, obj):
+        return obj.question[:80] + '...' if len(obj.question) > 80 else obj.question
+    question_short.short_description = 'Question'

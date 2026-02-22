@@ -11,4 +11,4 @@ class BannerListView(generics.ListAPIView):
     serializer_class = BannerSerializer
     
     def get_queryset(self):
-        return Banner.objects.filter(is_active=True).order_by('display_order', '-created_at')
+        return Banner.objects.filter(is_active=True).select_related('Product').order_by('display_order', '-created_at')

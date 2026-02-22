@@ -2,11 +2,12 @@
 CloudServices India - Banner Models
 """
 from django.db import models
+from apps.products.models import Product
 
 
 class Banner(models.Model):
     """Simple Banner Model for mobile app"""
-    
+    Product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='banners' , null=True, blank=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
     image = models.ImageField(upload_to='banners/')
