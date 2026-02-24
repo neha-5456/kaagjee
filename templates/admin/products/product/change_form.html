@@ -285,6 +285,8 @@
 .options-container { margin-top: 14px; }
 .option-row { display: flex; gap: 8px; margin-bottom: 8px; }
 .option-row input { flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; }
+.option-row input.opt-label { flex: 1.5; border-color: #3b82f6; }
+.option-row input.opt-value { flex: 1; border-color: #10b981; background: #f0fdf4; }
 .option-row button { padding: 10px; border: none; border-radius: 6px; background: #fef2f2; color: #dc2626; cursor: pointer; }
 .add-option-btn {
     width: 100%;
@@ -768,7 +770,10 @@
         if (hasOpts) {
             optsHtml = '<div class="options-container"><label style="font-weight:600;display:block;margin-bottom:8px;font-size:13px;">Options</label>';
             (f.options || []).forEach(function(o, i) {
-                optsHtml += '<div class="option-row"><input type="text" value="' + (o.label || o) + '" data-idx="' + i + '" class="opt-input" placeholder="Option text">' +
+                var optLabel = typeof o === 'object' ? (o.label || '') : o;
+                var optValue = typeof o === 'object' ? (o.value || '') : o;
+                optsHtml += '<div class="option-row"><input type="text" value="' + optLabel + '" data-idx="' + i + '" class="opt-label" placeholder="Option label" style="flex:1.5;">' +
+                    '<input type="text" value="' + optValue + '" data-idx="' + i + '" class="opt-value" placeholder="Option value" style="flex:1;">' +
                     '<button type="button" class="opt-remove" data-idx="' + i + '"' + ((f.options || []).length <= 1 ? ' disabled style="opacity:0.3"' : '') + '><i class="fas fa-times"></i></button></div>';
             });
             optsHtml += '<button type="button" class="add-option-btn"><i class="fas fa-plus"></i> Add Option</button></div>';
@@ -799,19 +804,17 @@
         
         // Bind events
         $panel.find('.f-label').on('input', function() { 
-            var val = $(this).val();
-            setTimeout(function() { updateField(fieldId, 'label', val); }, 300);
+            updateField(fieldId, 'label', $(this).val());
         });
         $panel.find('.f-placeholder').on('input', function() { 
-            var val = $(this).val();
-            setTimeout(function() { updateField(fieldId, 'placeholder', val); }, 300);
+            updateField(fieldId, 'placeholder', $(this).val());
         });
         $panel.find('.f-help').on('input', function() { 
-            var val = $(this).val();
-            setTimeout(function() { updateField(fieldId, 'help_text', val); }, 300);
+            updateField(fieldId, 'help_text', $(this).val());
         });
         $panel.find('.f-required').on('change', function() { updateField(fieldId, 'required', $(this).is(':checked')); });
-        $panel.find('.opt-input').on('input', function() { updateOption(fieldId, $(this).data('idx'), $(this).val()); });
+        $panel.find('.opt-label').on('input', function() { updateOptionLabel(fieldId, $(this).data('idx'), $(this).val()); });
+        $panel.find('.opt-value').on('input', function() { updateOptionValue(fieldId, $(this).data('idx'), $(this).val()); });
         $panel.find('.opt-remove').on('click', function() { removeOption(fieldId, $(this).data('idx')); });
         $panel.find('.add-option-btn').on('click', function() { addOption(fieldId); });
         $panel.find('.max-files').on('change', function() { updateValidation(fieldId, 'max_files', parseInt($(this).val())); });
@@ -881,11 +884,11 @@
         f[key] = value;
         if (key === 'label') {
             f.name = value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field';
-            renderFields();
-            showSettings(id);
-        } else {
-            saveSchema();
+            // Update field list without re-rendering settings
+            var $item = $('.field-item[data-id="' + id + '"]');
+            $item.find('.field-item-label').text(value);
         }
+        saveSchema();
     }
     
     function updateValidation(id, key, value) {
@@ -903,6 +906,28 @@
         var num = f.options.length + 1;
         f.options.push({label: 'Option ' + num, value: 'option_' + num});
         showSettings(id);
+        saveSchema();
+    }
+    
+    function updateOptionLabel(id, idx, value) {
+        var f = formFields.find(function(x) { return x.id === id; });
+        if (!f || !f.options || !f.options[idx]) return;
+        if (typeof f.options[idx] === 'object') {
+            f.options[idx].label = value;
+        } else {
+            f.options[idx] = {label: value, value: value.toLowerCase().replace(/[^a-z0-9]+/g, '_')};
+        }
+        saveSchema();
+    }
+    
+    function updateOptionValue(id, idx, value) {
+        var f = formFields.find(function(x) { return x.id === id; });
+        if (!f || !f.options || !f.options[idx]) return;
+        if (typeof f.options[idx] === 'object') {
+            f.options[idx].value = value;
+        } else {
+            f.options[idx] = {label: f.options[idx], value: value};
+        }
         saveSchema();
     }
     
