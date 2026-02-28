@@ -12,6 +12,7 @@ from .views import (
     ProductsByCategoryView,
     ProductsByLocationView,
     CheckProductAvailabilityView,
+    CalculatePriceView,
 )
 
 app_name = 'products'
@@ -57,4 +58,9 @@ urlpatterns = [
     # POST /products/<slug>/check-availability/
     # Body: {"state_id": 1, "city_id": 5}
     path('<slug:slug>/check-availability/', CheckProductAvailabilityView.as_view(), name='check-availability'),
+    
+    # Calculate dynamic price based on selected form options
+    # POST /products/<slug>/calculate-price/
+    # Body: {"form_data": {"field_id": "selected_value"}}
+    path('<slug:slug>/calculate-price/', CalculatePriceView.as_view(), name='calculate-price'),
 ]

@@ -15,6 +15,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Q
 from .models import Product, ProductImage, ProductFAQ
+from .utils import get_priced_fields_from_schema, calculate_total_price
 
 
 # ========================
@@ -89,6 +90,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     form_fields_count = serializers.SerializerMethodField()
     available_states_data = serializers.SerializerMethodField()
     available_cities_data = serializers.SerializerMethodField()
+    priced_fields = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -99,7 +101,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'is_pan_india', 'available_states', 'available_cities',
             'available_states_data', 'available_cities_data',
             'full_price', 'half_price', 'original_price', 'discount_percentage', 'allow_half_payment',
-            'form_title', 'form_description', 'form_schema',
+            'form_title', 'form_description', 'form_schema', 'priced_fields',
             'status', 'is_featured', 'is_popular',
             'meta_title', 'meta_description', 'meta_keywords',
             'processing_time', 'documents_required',
@@ -127,6 +129,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         if obj.is_pan_india:
             return [{'id': None, 'name': 'All Cities'}]
         return list(obj.available_cities.values('id', 'name', 'slug', 'state__name', 'state__code'))
+
+    def get_priced_fields(self, obj):
+        """Return fields that have pricing enabled — frontend uses this for dynamic pricing"""
+        return get_priced_fields_from_schema(obj.form_schema)
 
 
 class FormSchemaSerializer(serializers.ModelSerializer):
@@ -518,6 +524,40 @@ class ProductsByLocationView(generics.ListAPIView):
             'count': len(serializer.data),
             'data': serializer.data
         })
+
+
+class CalculatePriceView(APIView):
+    """
+    Calculate total price based on selected form options (dynamic pricing)
+    
+    POST /products/<slug>/calculate-price/
+    Body: {"form_data": {"field_id_123": "selected_value", ...}}
+    
+    Response:
+    {
+        "success": true,
+        "data": {
+            "base_price": 500.00,
+            "options_price": 200.00,
+            "total_price": 700.00,
+            "price_breakdown": [
+                {"field_label": "Package Type", "option_label": "Premium", "price": 200.00}
+            ]
+        }
+    }
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug):
+        try:
+            product = Product.objects.get(slug=slug, status=Product.Status.ACTIVE)
+        except Product.DoesNotExist:
+            return Response({'success': False, 'error': 'Product not found'}, status=404)
+        
+        form_data = request.data.get('form_data', {})
+        pricing = calculate_total_price(product, form_data)
+        
+        return Response({'success': True, 'data': pricing})
 
 
 class CheckProductAvailabilityView(APIView):

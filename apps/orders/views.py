@@ -22,6 +22,7 @@ import hashlib
 
 from .models import FormSubmission, Cart, CartItem, Order, OrderItem, Payment
 from apps.products.models import Product
+from apps.products.utils import calculate_total_price
 
 
 import os
@@ -210,12 +211,16 @@ class SubmitFormView(APIView):
                 'errors': errors
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Calculate price based on selected options (dynamic pricing)
+        pricing = calculate_total_price(product, form_data)
+        calculated_price = pricing['total_price']
+        
         # Create submission
         submission = FormSubmission.objects.create(
             user=request.user,
             product=product,
             form_data=form_data,
-            price_at_submission=product.full_price,
+            price_at_submission=calculated_price,
             user_notes=user_notes,
             status=FormSubmission.Status.IN_CART
         )
@@ -226,7 +231,7 @@ class SubmitFormView(APIView):
             cart=cart,
             product=product,
             form_submission=submission,
-            unit_price=product.full_price
+            unit_price=calculated_price
         )
         
         return Response({
@@ -236,7 +241,8 @@ class SubmitFormView(APIView):
                 'submission': FormSubmissionSerializer(submission).data,
                 'cart_item_id': cart_item.id,
                 'cart_total': cart.total_amount,
-                'cart_items_count': cart.total_items
+                'cart_items_count': cart.total_items,
+                'pricing': pricing
             }
         }, status=status.HTTP_201_CREATED)
 
@@ -245,9 +251,10 @@ class SubmitFormWithFilesView(APIView):
     """Submit form with file uploads"""
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
-    
+
     @transaction.atomic
     def post(self, request):
+        
         import json
         import os
         from django.core.files.storage import default_storage
@@ -291,23 +298,30 @@ class SubmitFormWithFilesView(APIView):
                 uploaded_files[field_name] = saved_files
                 form_data[field_name] = saved_files
         
-        # Create submission
+        # ========================================
+        # DYNAMIC PRICING: Calculate based on selected dropdown/radio options
+        # ========================================
+        pricing = calculate_total_price(product, form_data)
+        print("Pricing details:", pricing)
+        calculated_price = pricing['total_price']
+        
+        # Create submission with calculated price (not just product.full_price)
         submission = FormSubmission.objects.create(
             user=request.user,
             product=product,
             form_data=form_data,
             uploaded_files=uploaded_files,
-            price_at_submission=product.full_price,
+            price_at_submission=calculated_price,
             status=FormSubmission.Status.IN_CART
         )
         
-        # Add to cart
+        # Add to cart with calculated price
         cart = get_or_create_cart(request.user)
         CartItem.objects.create(
             cart=cart,
             product=product,
             form_submission=submission,
-            unit_price=product.full_price
+            unit_price=calculated_price
         )
         
         return Response({
@@ -315,7 +329,8 @@ class SubmitFormWithFilesView(APIView):
             'message': 'Form submitted with files',
             'data': {
                 'submission': FormSubmissionSerializer(submission).data,
-                'cart_items_count': cart.total_items
+                'cart_items_count': cart.total_items,
+                'pricing': pricing
             }
         }, status=201)
     
@@ -514,6 +529,23 @@ class CheckoutView(APIView):
                 'success': False,
                 'error': 'Invalid payment_type. Use "full" or "half"'
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if any cart item has dropdown variation (has price_breakdown)
+        has_variation = False
+        for item in cart.items.all():
+            pricing = calculate_total_price(item.product, item.form_submission.form_data)
+            print("Pricing for item:", item.product.title, pricing)
+            if pricing.get('price_breakdown'):
+                has_variation = True
+                break
+        
+        # If variation exists, force full payment only
+        if has_variation:
+            if payment_type == 'half':
+                return Response({
+                    'success': False,
+                    'error': 'Half payment not allowed for variation products'
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         # Check if half payment is allowed for all items
         if payment_type == 'half':
@@ -1239,4 +1271,3 @@ class DeleteUploadedFileView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-

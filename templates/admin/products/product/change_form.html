@@ -381,7 +381,6 @@
         {type:'phone', icon:'fa-phone', label:'Phone'},
         {type:'number', icon:'fa-hashtag', label:'Number'},
         {type:'date', icon:'fa-calendar', label:'Date'},
-        {type:'price', icon:'fa-rupee-sign', label:'Price'},
         {type:'dropdown', icon:'fa-chevron-down', label:'Dropdown'},
         {type:'checkbox', icon:'fa-check-square', label:'Checkbox'},
         {type:'radio', icon:'fa-circle-dot', label:'Radio'},
@@ -768,12 +767,15 @@
         
         var optsHtml = '';
         if (hasOpts) {
-            optsHtml = '<div class="options-container"><label style="font-weight:600;display:block;margin-bottom:8px;font-size:13px;">Options</label>';
+            optsHtml = '<div class="options-container"><label style="font-weight:600;display:block;margin-bottom:8px;font-size:13px;">Options</label>' +
+                '<div style="background:#fffbeb;padding:10px;border-radius:6px;margin-bottom:10px;border:1px solid #fbbf24;">' +
+                '<small style="color:#92400e;"><i class="fas fa-info-circle"></i> <strong>Note:</strong> Value will be used as price (e.g., value=200 means ₹200)</small></div>';
             (f.options || []).forEach(function(o, i) {
                 var optLabel = typeof o === 'object' ? (o.label || '') : o;
                 var optValue = typeof o === 'object' ? (o.value || '') : o;
-                optsHtml += '<div class="option-row"><input type="text" value="' + optLabel + '" data-idx="' + i + '" class="opt-label" placeholder="Option label" style="flex:1.5;">' +
-                    '<input type="text" value="' + optValue + '" data-idx="' + i + '" class="opt-value" placeholder="Option value" style="flex:1;">' +
+                optsHtml += '<div class="option-row">' +
+                    '<input type="text" value="' + optLabel + '" data-idx="' + i + '" class="opt-label" placeholder="Label" style="flex:1.5;">' +
+                    '<input type="text" value="' + optValue + '" data-idx="' + i + '" class="opt-value" placeholder="Value (will be used as price)" style="flex:1;">' +
                     '<button type="button" class="opt-remove" data-idx="' + i + '"' + ((f.options || []).length <= 1 ? ' disabled style="opacity:0.3"' : '') + '><i class="fas fa-times"></i></button></div>';
             });
             optsHtml += '<button type="button" class="add-option-btn"><i class="fas fa-plus"></i> Add Option</button></div>';
@@ -799,6 +801,8 @@
             '</div>' +
             '<div class="toggle-row"><div><strong style="font-size:14px;">Required Field</strong><br><small style="color:#64748b;">Make this field mandatory</small></div>' +
             '<label class="toggle-switch"><input type="checkbox" class="f-required"' + (f.required ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>' +
+            (hasOpts ? '<div class="toggle-row" style="background:#dcfce7;border-color:#22c55e;"><div><strong style="font-size:14px;color:#166534;"><i class="fas fa-rupee-sign"></i> Enable Pricing</strong><br><small style="color:#166534;">Value will be used as price automatically</small></div>' +
+            '<label class="toggle-switch"><input type="checkbox" class="f-has-price"' + (f.has_price ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>' : '') +
             optsHtml + fileHtml
         ).addClass('active');
         
@@ -813,6 +817,7 @@
             updateField(fieldId, 'help_text', $(this).val());
         });
         $panel.find('.f-required').on('change', function() { updateField(fieldId, 'required', $(this).is(':checked')); });
+        $panel.find('.f-has-price').on('change', function() { updateField(fieldId, 'has_price', $(this).is(':checked')); });
         $panel.find('.opt-label').on('input', function() { updateOptionLabel(fieldId, $(this).data('idx'), $(this).val()); });
         $panel.find('.opt-value').on('input', function() { updateOptionValue(fieldId, $(this).data('idx'), $(this).val()); });
         $panel.find('.opt-remove').on('click', function() { removeOption(fieldId, $(this).data('idx')); });
@@ -904,7 +909,7 @@
         if (!f) return;
         if (!f.options) f.options = [];
         var num = f.options.length + 1;
-        f.options.push({label: 'Option ' + num, value: 'option_' + num});
+        f.options.push({label: 'Option ' + num, value: 'option_' + num, price: 0});
         showSettings(id);
         saveSchema();
     }
@@ -925,8 +930,10 @@
         if (!f || !f.options || !f.options[idx]) return;
         if (typeof f.options[idx] === 'object') {
             f.options[idx].value = value;
+            // Auto-set price = value
+            f.options[idx].price = value ? parseFloat(value) || 0 : 0;
         } else {
-            f.options[idx] = {label: f.options[idx], value: value};
+            f.options[idx] = {label: f.options[idx], value: value, price: parseFloat(value) || 0};
         }
         saveSchema();
     }
