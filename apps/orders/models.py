@@ -106,6 +106,7 @@ class CartItem(models.Model):
         related_name='cart_item'
     )
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    half_payment = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     added_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

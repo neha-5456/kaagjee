@@ -76,7 +76,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'product_id', 'product_title', 'product_slug', 'product_image',
             'full_price', 'half_price', 'allow_half_payment', 'unit_price',
-            'submission_id', 'form_data', 'added_at'
+            'submission_id', 'form_data', 'added_at', 'half_payment'
         ]
 
 
@@ -305,6 +305,10 @@ class SubmitFormWithFilesView(APIView):
         print("Pricing details:", pricing)
         calculated_price = pricing['total_price']
         
+        # Check if dropdown option selected (has price_breakdown)
+        has_dropdown_selection = bool(pricing.get('price_breakdown'))
+        half_payment_value = 0 if has_dropdown_selection else product.half_price
+        
         # Create submission with calculated price (not just product.full_price)
         submission = FormSubmission.objects.create(
             user=request.user,
@@ -321,7 +325,8 @@ class SubmitFormWithFilesView(APIView):
             cart=cart,
             product=product,
             form_submission=submission,
-            unit_price=calculated_price
+            unit_price=calculated_price,
+            half_payment=half_payment_value
         )
         
         return Response({
@@ -334,6 +339,72 @@ class SubmitFormWithFilesView(APIView):
             }
         }, status=201)
     
+    # @transaction.atomic
+    # def put(self, request):
+    #     import json
+    #     import os
+    #     from django.core.files.storage import default_storage
+    #     from django.core.files.base import ContentFile
+
+    #     submission_id = request.data.get('submission_id')
+
+    #     if not submission_id:
+    #         return Response(
+    #             {'success': False, 'error': 'submission_id is required'},
+    #             status=400
+    #         )
+
+    #     try:
+    #         submission = FormSubmission.objects.get(
+    #             id=submission_id,
+    #             user=request.user,
+    #             status=FormSubmission.Status.IN_CART
+    #         )
+    #     except FormSubmission.DoesNotExist:
+    #         return Response(
+    #             {'success': False, 'error': 'Submission not found or not editable'},
+    #             status=404
+    #         )
+
+    #     # Existing data
+    #     form_data = submission.form_data or {}
+    #     uploaded_files = submission.uploaded_files or {}
+
+    #     # Update form_data
+    #     try:
+    #         incoming_form_data = json.loads(request.data.get('form_data', '{}'))
+    #         form_data.update(incoming_form_data)
+    #     except:
+    #         pass
+
+    #     # Handle new uploaded files
+    #     for key, file_list in request.FILES.lists():
+    #         field_name = key[5:] if key.startswith('file_') else key
+    #         saved_files = []
+
+    #         for file in file_list:
+    #             filename = f"{submission.id}_{field_name}_{file.name}"
+    #             path = f"submissions/{submission.product.slug}/{filename}"
+    #             saved_path = default_storage.save(path, ContentFile(file.read()))
+    #             saved_files.append(saved_path)
+
+    #         # single vs multiple
+    #         if len(saved_files) == 1:
+    #             uploaded_files[field_name] = saved_files[0]
+    #             form_data[field_name] = saved_files[0]
+    #         else:
+    #             uploaded_files[field_name] = saved_files
+    #             form_data[field_name] = saved_files
+
+    #     submission.form_data = form_data
+    #     submission.uploaded_files = uploaded_files
+    #     submission.save(update_fields=['form_data', 'uploaded_files'])
+
+    #     return Response({
+    #         'success': True,
+    #         'message': 'Form updated successfully',
+    #         'data': FormSubmissionSerializer(submission).data
+    #     }, status=200)
     @transaction.atomic
     def put(self, request):
         import json
@@ -383,7 +454,6 @@ class SubmitFormWithFilesView(APIView):
                 saved_path = default_storage.save(path, ContentFile(file.read()))
                 saved_files.append(saved_path)
 
-            # single vs multiple
             if len(saved_files) == 1:
                 uploaded_files[field_name] = saved_files[0]
                 form_data[field_name] = saved_files[0]
@@ -391,16 +461,42 @@ class SubmitFormWithFilesView(APIView):
                 uploaded_files[field_name] = saved_files
                 form_data[field_name] = saved_files
 
+        # ========================================
+        # DYNAMIC PRICING (Same as POST)
+        # ========================================
+        pricing = calculate_total_price(submission.product, form_data)
+        calculated_price = pricing['total_price']
+        
+        # Check if dropdown option selected (has price_breakdown)
+        has_dropdown_selection = bool(pricing.get('price_breakdown'))
+        half_payment_value = 0 if has_dropdown_selection else submission.product.half_price
+
+        # Update submission
         submission.form_data = form_data
         submission.uploaded_files = uploaded_files
-        submission.save(update_fields=['form_data', 'uploaded_files'])
+        submission.price_at_submission = calculated_price
+        submission.save(update_fields=[
+            'form_data',
+            'uploaded_files',
+            'price_at_submission'
+        ])
+
+        # Update cart item price
+        CartItem.objects.filter(
+            form_submission=submission
+        ).update(
+            unit_price=calculated_price,
+            half_payment=half_payment_value
+        )
 
         return Response({
             'success': True,
             'message': 'Form updated successfully',
-            'data': FormSubmissionSerializer(submission).data
+            'data': {
+                'submission': FormSubmissionSerializer(submission).data,
+                'pricing': pricing
+            }
         }, status=200)
-
 
 # ========================
 # CART APIs
