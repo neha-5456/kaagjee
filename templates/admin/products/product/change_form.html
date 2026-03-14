@@ -114,194 +114,173 @@
     border-color: #6366f1 !important;
 }
 
-/* ===== FORM BUILDER ===== */
-.form-builder-wrapper {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-radius: 12px;
-    padding: 20px;
-    margin: 16px 0;
-    box-shadow: 0 8px 30px rgba(99,102,241,0.3);
-}
-.form-builder-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    color: white;
-}
-.form-builder-header h3 { margin: 0; font-size: 18px; }
-.form-builder-header p { margin: 4px 0 0; opacity: 0.8; font-size: 13px; }
-.form-builder-body {
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-}
-.field-palette {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-    padding: 15px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 2px dashed #e2e8f0;
-    margin-bottom: 16px;
-}
-.field-type-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 8px;
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-    font-size: 11px;
-    color: #64748b;
-}
-.field-type-btn:hover {
-    border-color: #6366f1;
-    background: #eef2ff;
-    transform: translateY(-2px);
-    color: #6366f1;
-}
-.field-type-btn i { font-size: 20px; }
-.fields-list {
-    min-height: 100px;
-    border: 2px dashed #e2e8f0;
-    border-radius: 8px;
-    padding: 12px;
-    background: #fafafa;
-}
-.field-item {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.field-item:hover { border-color: #6366f1; box-shadow: 0 2px 8px rgba(99,102,241,0.1); }
-.field-item.selected { border-color: #6366f1; background: #eef2ff; }
-.field-item-icon {
-    width: 36px;
-    height: 36px;
-    background: #f1f5f9;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #64748b;
-    font-size: 16px;
-}
-.field-item.selected .field-item-icon { background: #6366f1; color: white; }
-.field-item-info { flex: 1; }
-.field-item-label { font-weight: 600; color: #1f2937; font-size: 14px; }
-.field-item-type { font-size: 12px; color: #64748b; }
-.field-item-required {
-    background: #fef2f2;
-    color: #dc2626;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 500;
-}
-.field-item-actions { display: flex; gap: 4px; }
-.field-item-actions button {
-    width: 30px;
-    height: 30px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    color: #64748b;
-    font-size: 12px;
-    transition: all 0.15s;
-}
-.field-item-actions button:hover { background: #f1f5f9; }
-.field-item-actions button.del:hover { background: #fef2f2; color: #dc2626; }
-.field-settings {
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 18px;
-    margin-top: 16px;
-    display: none;
-    border: 1px solid #e2e8f0;
-}
-.field-settings.active { display: block; }
-.field-settings h4 { margin: 0 0 14px; color: #1f2937; font-size: 15px; }
-.settings-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-}
-.settings-group { display: flex; flex-direction: column; gap: 5px; }
-.settings-group label { font-size: 12px; font-weight: 600; color: #374151; }
-.settings-group input, .settings-group select {
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 13px;
-}
-.toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    margin-top: 14px;
-}
-.toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: #d1d5db;
-    transition: .3s;
-    border-radius: 26px;
-}
-.toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 20px;
-    width: 20px;
-    left: 3px;
-    bottom: 3px;
-    background: white;
-    transition: .3s;
-    border-radius: 50%;
-}
-.toggle-switch input:checked + .toggle-slider { background: #6366f1; }
-.toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
-.options-container { margin-top: 14px; }
-.option-row { display: flex; gap: 8px; margin-bottom: 8px; }
-.option-row input { flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; }
-.option-row input.opt-label { flex: 1.5; border-color: #3b82f6; }
-.option-row input.opt-value { flex: 1; border-color: #10b981; background: #f0fdf4; }
-.option-row button { padding: 10px; border: none; border-radius: 6px; background: #fef2f2; color: #dc2626; cursor: pointer; }
-.add-option-btn {
-    width: 100%;
-    padding: 12px;
-    border: 2px dashed #d1d5db;
-    border-radius: 6px;
-    background: transparent;
-    color: #6b7280;
-    cursor: pointer;
-    margin-top: 8px;
-    font-size: 13px;
-}
-.add-option-btn:hover { border-color: #6366f1; color: #6366f1; }
-.empty-fields { text-align: center; padding: 40px; color: #94a3b8; }
-.empty-fields i { font-size: 36px; margin-bottom: 10px; opacity: 0.5; }
+/* ===== FORM BUILDER v2 ===== */
+
+/* Tab bar */
+.fb-tabs{display:flex;background:#f1f5f9;border-radius:10px 10px 0 0;overflow:hidden;border:1.5px solid #e2e8f0;border-bottom:none;margin-top:16px}
+.fb-tab{flex:1;padding:11px 14px;text-align:center;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;transition:all .2s;user-select:none;display:flex;align-items:center;justify-content:center;gap:7px;border-bottom:3px solid transparent}
+.fb-tab:hover{background:#e2e8f0;color:#374151}
+.fb-tab.active{background:#fff;color:#4f46e5;border-bottom-color:#4f46e5}
+.fb-tab-badge{background:#ede9fe;color:#5b21b6;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700}
+.fb-tab.active .fb-tab-badge{background:#4f46e5;color:#fff}
+
+/* Panels */
+.fb-panel{display:none;background:#fff;border:1.5px solid #e2e8f0;border-radius:0 0 10px 10px;padding:18px}
+.fb-panel.active{display:block}
+
+/* Header bar */
+.fb-header-bar{background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.fb-hb-icon{font-size:26px;color:#fff}
+.fb-hb-title{color:#fff;font-size:17px;font-weight:700;margin:0}
+.fb-hb-sub{color:rgba(255,255,255,.75);font-size:12px;margin:2px 0 0}
+.fb-hb-count{margin-left:auto;background:rgba(255,255,255,.18);border-radius:20px;padding:3px 14px;font-size:13px;font-weight:700;color:#fff}
+
+/* Palette */
+.fb-palette-wrap{background:#f8fafc;border:2px dashed #e2e8f0;border-radius:10px;padding:12px;margin-bottom:16px}
+.fb-palette-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#64748b;margin-bottom:8px}
+.fb-palette{display:flex;flex-wrap:wrap;gap:6px}
+.fb-type-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;color:#475569;font-family:inherit;transition:all .18s}
+.fb-type-btn i{font-size:12px;width:13px;text-align:center}
+.fb-type-btn:hover{border-color:#6366f1;background:#eef2ff;color:#4f46e5;transform:translateY(-1px);box-shadow:0 3px 10px rgba(99,102,241,.18)}
+
+/* Fields list */
+.fb-list-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#64748b;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.fb-hint-text{font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:#94a3b8}
+.fb-fields-drop{min-height:80px;border:2px dashed #e2e8f0;border-radius:10px;padding:8px;background:#fafafa;transition:all .2s}
+.fb-fields-drop.drag-over{background:#eef2ff;border-color:#6366f1;border-style:solid}
+.fb-empty-state{text-align:center;padding:30px 20px;color:#94a3b8}
+.fb-empty-state i{font-size:32px;margin-bottom:8px;display:block;opacity:.35}
+.fb-empty-state p{font-size:13px;margin:0}
+
+/* Field card */
+.fb-card{background:#fff;border:2px solid #e5e7eb;border-radius:10px;margin-bottom:8px;transition:border-color .15s,box-shadow .15s;overflow:hidden}
+.fb-card.is-selected{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.fb-card.is-dragging{opacity:.35;border-style:dashed}
+.fb-card.drag-target{border-color:#6366f1;background:#f5f3ff}
+
+.fb-card-top{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none;border-bottom:2px solid transparent}
+.fb-card.is-selected .fb-card-top{border-bottom-color:#e5e7eb}
+.fb-drag-handle{color:#d1d5db;cursor:grab;font-size:14px;padding:0 3px;flex-shrink:0}
+.fb-drag-handle:active{cursor:grabbing;color:#6366f1}
+
+.fb-card-icon{width:32px;height:32px;border-radius:7px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px;flex-shrink:0;transition:all .2s}
+.fb-card.is-selected .fb-card-icon{background:#4f46e5;color:#fff}
+.fb-card-info{flex:1;min-width:0}
+.fb-card-label{font-weight:600;font-size:13px;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fb-card-meta{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+
+/* Badges */
+.fb-badge{display:inline-flex;align-items:center;gap:2px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.fb-badge-type{background:#ede9fe;color:#6d28d9}
+.fb-badge-req{background:#fef2f2;color:#dc2626}
+.fb-badge-price{background:#dcfce7;color:#166534}
+.fb-badge-nested{background:#e0f2fe;color:#0369a1}
+
+/* Card actions */
+.fb-card-actions{display:flex;gap:2px;flex-shrink:0}
+.fb-act-btn{width:27px;height:27px;border:none;border-radius:6px;background:transparent;cursor:pointer;color:#9ca3af;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.fb-act-btn:hover{background:#f1f5f9;color:#374151}
+.fb-act-btn.del:hover{background:#fef2f2;color:#dc2626}
+.fb-act-btn.dup:hover{background:#dcfce7;color:#166534}
+.fb-act-btn:disabled{opacity:.25;cursor:not-allowed}
+
+/* Settings panel */
+.fb-settings{padding:14px 12px;background:#fdfdfe}
+.fb-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fb-sg{display:flex;flex-direction:column;gap:4px}
+.fb-sg label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#374151}
+.fb-sg input,.fb-sg select,.fb-sg textarea{padding:8px 10px!important;border:1.5px solid #d1d5db!important;border-radius:7px!important;font-size:12px!important;width:100%!important;max-width:none!important;box-sizing:border-box!important;font-family:inherit!important;transition:border-color .15s!important;background:#fff!important}
+.fb-sg input:focus,.fb-sg select:focus{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.1)!important;outline:none!important}
+.fb-id-input{background:#f8fafc!important;color:#94a3b8!important;cursor:not-allowed!important;font-family:monospace!important;font-size:11px!important}
+
+/* Toggles */
+.fb-toggles{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.fb-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;background:#f9fafb}
+.fb-toggle-row.green{background:#f0fdf4;border-color:#86efac}
+.fb-toggle-lbl .ttl{font-size:12px;font-weight:600;color:#374151}
+.fb-toggle-lbl .sub{font-size:11px;color:#6b7280;margin-top:1px}
+.fb-switch{position:relative;display:inline-block;width:42px;height:22px;flex-shrink:0}
+.fb-switch input{opacity:0;width:0;height:0}
+.fb-slider{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:22px;transition:.25s}
+.fb-slider:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.fb-switch input:checked + .fb-slider{background:#6366f1}
+.fb-switch input:checked + .fb-slider:before{transform:translateX(20px)}
+
+/* Options editor */
+.fb-opts-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#374151;margin:12px 0 6px;display:flex;align-items:center;gap:6px}
+.fb-opts-note{font-size:11px;color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0}
+.fb-opt-cols-hdr{display:grid;gap:5px;align-items:center;margin-bottom:4px;padding:0 2px}
+.fb-opt-cols-hdr span{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase}
+
+.fb-opt-row{display:flex;align-items:center;gap:5px;padding:5px 6px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:4px}
+.fb-opt-row.nested-open{border-color:#818cf8;border-radius:8px 8px 0 0;margin-bottom:0;background:#eef2ff}
+.fb-opt-input{padding:6px 8px!important;border:1.5px solid #d1d5db!important;border-radius:6px!important;font-size:12px!important;max-width:none!important;font-family:inherit!important;background:#fff!important;transition:border-color .15s!important;box-sizing:border-box!important}
+.fb-opt-input:focus{border-color:#6366f1!important;outline:none!important}
+.fb-opt-input.lbl{flex:1.5;min-width:0}
+.fb-opt-input.slug{flex:1;min-width:0;font-family:monospace;color:#64748b;font-size:11px!important}
+.fb-opt-input.price{width:68px;flex:none;text-align:right}
+
+/* Nested toggle button */
+.fb-nested-btn{display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid #c7d2fe;border-radius:6px;background:#eef2ff;color:#4338ca;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:inherit;flex-shrink:0}
+.fb-nested-btn:hover{background:#e0e7ff;border-color:#818cf8}
+.fb-nested-btn.open{background:#4f46e5;color:#fff;border-color:#4f46e5}
+.fb-nc{background:#c7d2fe;color:#4338ca;border-radius:8px;padding:0 5px;font-size:10px;min-width:14px;text-align:center;display:inline-block}
+.fb-nested-btn.open .fb-nc{background:rgba(255,255,255,.3);color:#fff}
+
+.fb-opt-del-btn{width:24px;height:24px;border:none;background:transparent;cursor:pointer;color:#f87171;font-size:12px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fb-opt-del-btn:hover{background:#fef2f2}
+.fb-opt-del-btn:disabled{opacity:.2;cursor:not-allowed}
+
+.fb-add-opt-btn{display:flex;align-items:center;gap:6px;padding:7px;border:2px dashed #c7d2fe;border-radius:7px;background:transparent;color:#6366f1;font-size:12px;font-weight:600;cursor:pointer;width:100%;justify-content:center;transition:all .15s;font-family:inherit;margin-top:6px}
+.fb-add-opt-btn:hover{background:#eef2ff;border-color:#818cf8}
+
+/* Nested panel */
+.fb-nested-panel{background:#f5f3ff;border:1.5px solid #a5b4fc;border-top:none;border-radius:0 0 8px 8px;padding:10px;margin-bottom:4px}
+.fb-nested-panel-hdr{display:flex;align-items:center;gap:7px;font-size:12px;color:#5b21b6;font-weight:700;margin-bottom:8px;padding-bottom:7px;border-bottom:1.5px solid #ddd6fe}
+.fb-nested-palette{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.fb-nested-type-btn{padding:4px 9px;border:1.5px solid #ddd6fe;border-radius:6px;background:#fff;cursor:pointer;font-size:11px;color:#6b7280;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:4px}
+.fb-nested-type-btn:hover{border-color:#7c3aed;color:#5b21b6;background:#faf5ff}
+
+/* Nested field card */
+.fb-nested-card{background:#fff;border:1.5px solid #ddd6fe;border-radius:8px;margin-bottom:5px;overflow:hidden}
+.fb-nested-card-top{display:flex;align-items:center;gap:7px;padding:7px 10px;cursor:pointer;background:#faf5ff;user-select:none}
+.fb-nested-card-top:hover{background:#f3e8ff}
+.fb-nested-card-body{display:none;padding:10px 12px;border-top:1px solid #ede9fe;background:#fff}
+.fb-nested-card-body.open{display:block}
+.fb-nested-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+
+/* Validation box */
+.fb-val-box{margin-top:10px;padding:10px 12px;background:#fef3c7;border:1.5px solid #fbbf24;border-radius:8px}
+.fb-val-box-title{font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.fb-val-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Preview tab */
+.fb-preview-wrap{max-width:580px;margin:0 auto}
+.fb-preview-title{font-size:15px;font-weight:700;color:#1f2937;margin-bottom:4px}
+.fb-preview-sub{font-size:13px;color:#6b7280;margin-bottom:18px}
+.fb-preview-field{margin-bottom:15px}
+.fb-preview-field>label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px}
+.req-star{color:#dc2626;margin-left:2px}
+.field-hint{font-size:11px;color:#6b7280;margin-top:4px}
+.fb-preview-field input[type=text],.fb-preview-field input[type=email],.fb-preview-field input[type=number],.fb-preview-field input[type=date],.fb-preview-field input[type=tel],.fb-preview-field textarea,.fb-preview-field select{width:100%!important;padding:9px 12px!important;border:2px solid #e5e7eb!important;border-radius:8px!important;font-size:13px!important;max-width:none!important;font-family:inherit!important;background:#fff!important;box-sizing:border-box!important;transition:border-color .2s!important}
+.fb-preview-field input:focus,.fb-preview-field select:focus,.fb-preview-field textarea:focus{border-color:#6366f1!important;outline:none!important}
+.fb-preview-opts{display:flex;flex-direction:column;gap:5px}
+.fb-preview-opt{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;transition:all .15s;font-size:13px}
+.fb-preview-opt:hover{border-color:#6366f1;background:#fafafe}
+.fb-preview-opt input{flex-shrink:0;accent-color:#6366f1}
+.opt-price-tag{margin-left:auto;background:#dcfce7;color:#166534;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
+.fb-nested-preview{margin-top:8px;padding:12px;background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:8px;display:none}
+.fb-nested-preview.show{display:block}
+.fb-nested-preview-lbl{font-size:11px;font-weight:700;color:#5b21b6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+
+/* JSON tab */
+.fb-json-wrap{position:relative}
+.fb-json-copy{position:absolute;top:10px;right:10px;padding:5px 12px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#374151;font-family:inherit;transition:all .15s}
+.fb-json-copy:hover{border-color:#6366f1;color:#4f46e5;background:#eef2ff}
+.fb-json-copy.copied{background:#dcfce7;border-color:#22c55e;color:#166534}
+.fb-json-out{background:#1e2433;color:#e2e8f0;padding:14px;border-radius:10px;font-family:monospace;font-size:12px;line-height:1.6;overflow-x:auto;white-space:pre;min-height:180px}
+
+.fb-divider{height:1px;background:#e5e7eb;margin:10px 0}
 
 /* ===== CHECKBOX GROUP STYLING ===== */
 .custom-dropdown {
@@ -375,20 +354,20 @@
     
     // Field Types
     var FIELD_TYPES = [
-        {type:'text', icon:'fa-font', label:'Text'},
-        {type:'textarea', icon:'fa-align-left', label:'Long Text'},
-        {type:'email', icon:'fa-envelope', label:'Email'},
-        {type:'phone', icon:'fa-phone', label:'Phone'},
-        {type:'number', icon:'fa-hashtag', label:'Number'},
-        {type:'date', icon:'fa-calendar', label:'Date'},
-        {type:'dropdown', icon:'fa-chevron-down', label:'Dropdown'},
-        {type:'checkbox', icon:'fa-check-square', label:'Checkbox'},
-        {type:'radio', icon:'fa-circle-dot', label:'Radio'},
-        {type:'file', icon:'fa-file-upload', label:'File'},
-        {type:'image', icon:'fa-image', label:'Image'},
-        {type:'aadhar', icon:'fa-id-card', label:'Aadhar'},
-        {type:'pan', icon:'fa-credit-card', label:'PAN'},
-        {type:'pincode', icon:'fa-map-pin', label:'Pincode'}
+        {type:'text',     icon:'fa-font',         label:'Text'},
+        {type:'textarea', icon:'fa-align-left',   label:'Long Text'},
+        {type:'email',    icon:'fa-envelope',     label:'Email'},
+        {type:'phone',    icon:'fa-phone',        label:'Phone'},
+        {type:'number',   icon:'fa-hashtag',      label:'Number'},
+        {type:'date',     icon:'fa-calendar',     label:'Date'},
+        {type:'dropdown', icon:'fa-chevron-down', label:'Dropdown', hasOpts:true},
+        {type:'checkbox', icon:'fa-check-square', label:'Checkbox', hasOpts:true},
+        {type:'radio',    icon:'fa-circle-dot',   label:'Radio',    hasOpts:true},
+        {type:'file',     icon:'fa-file-upload',  label:'File'},
+        {type:'image',    icon:'fa-image',        label:'Image'},
+        {type:'aadhar',   icon:'fa-id-card',      label:'Aadhar'},
+        {type:'pan',      icon:'fa-credit-card',  label:'PAN'},
+        {type:'pincode',  icon:'fa-map-pin',      label:'Pincode'}
     ];
     
     var formFields = [];
@@ -629,330 +608,627 @@
         });
     }
     
-    // ==================== FORM BUILDER ====================
+    // ==================== FORM BUILDER v2 ====================
+    // State
+    var openNested  = {};   // {fieldId+'_'+optIdx: bool}
+    var dragSrcIdx  = null;
+
+    function uid() { return 'f' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
+    function fmeta(type) { return FIELD_TYPES.find(function(f){ return f.type===type; }) || {icon:'fa-font',label:type,hasOpts:false}; }
+    function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function getField(id) { return formFields.find(function(f){ return f.id===id; }); }
+    function nKey(fid,oi) { return fid+'_'+oi; }
+
+    function defaultOpt(n) { return {label:'Option '+n, value:'option_'+n, price:0, nested_fields:[]}; }
+
+    function saveSchema() {
+        var $sf = $('#id_form_schema');
+        if ($sf.length) $sf.val(JSON.stringify(formFields));
+        $('#fb-count-badge').text(formFields.length);
+    }
+
     function initFormBuilder() {
         var $schema = $('#id_form_schema');
-        if (!$schema.length) {
-            console.log('⚠️ Form schema field not found');
-            return;
-        }
-        
-        console.log('✅ Form Builder init');
-        
-        // Parse existing
+        if (!$schema.length) return;
+
+        // Parse existing schema + migrate options
         try {
-            var val = $schema.val();
-            if (val && val !== '[]' && val !== 'null' && val.trim() !== '') {
+            var val = $.trim($schema.val());
+            if (val && val !== '[]' && val !== 'null') {
                 formFields = JSON.parse(val);
                 if (!Array.isArray(formFields)) formFields = [];
             }
-        } catch(e) {
-            console.log('⚠️ Parse error:', e);
-            formFields = [];
-        }
-        console.log('📋 Existing fields:', formFields.length);
-        
-        // Find fieldset
-        var $fieldset = null;
-        $('fieldset h2, fieldset legend').each(function() {
-            var text = $(this).text().toLowerCase();
-            if (text.indexOf('form') > -1 && text.indexOf('builder') > -1) {
-                $fieldset = $(this).closest('fieldset');
-            }
-        });
-        
-        if (!$fieldset) {
-            // Try finding by form_schema field
-            $fieldset = $schema.closest('fieldset');
-        }
-        
-        if (!$fieldset || !$fieldset.length) {
-            console.log('⚠️ Form Builder fieldset not found');
-            return;
-        }
-        
-        // Hide original
-        $schema.closest('.form-row').hide();
-        
-        // Create UI
-        var html = '<div class="form-builder-wrapper">' +
-            '<div class="form-builder-header">' +
-            '<div><i class="fas fa-magic" style="font-size:28px;"></i></div>' +
-            '<div><h3>Visual Form Builder</h3><p>Click buttons to add form fields</p></div>' +
-            '</div>' +
-            '<div class="form-builder-body">' +
-            '<h4 style="margin:0 0 12px;font-size:14px;color:#374151;"><i class="fas fa-plus-circle" style="color:#6366f1;"></i> Add Field Types</h4>' +
-            '<div class="field-palette" id="fieldPalette"></div>' +
-            '<h4 style="margin:20px 0 12px;font-size:14px;color:#374151;"><i class="fas fa-list" style="color:#10b981;"></i> Form Fields (<span id="fieldCount">0</span>)</h4>' +
-            '<div class="fields-list" id="fieldsList"></div>' +
-            '<div class="field-settings" id="fieldSettings"></div>' +
-            '</div></div>';
-        
-        $fieldset.find('.form-row').first().before(html);
-        
-        renderPalette();
-        renderFields();
-        
-        console.log('✅ Form Builder ready!');
-    }
-    
-    function renderPalette() {
-        var $p = $('#fieldPalette');
-        if (!$p.length) return;
-        
-        var html = '';
-        FIELD_TYPES.forEach(function(f) {
-            html += '<button type="button" class="field-type-btn" data-type="' + f.type + '">' +
-                '<i class="fas ' + f.icon + '"></i>' +
-                '<span>' + f.label + '</span></button>';
-        });
-        $p.html(html);
-        
-        $p.find('.field-type-btn').on('click', function() {
-            addField($(this).data('type'));
-        });
-    }
-    
-    function renderFields() {
-        var $list = $('#fieldsList');
-        var $count = $('#fieldCount');
-        if (!$list.length) return;
-        
-        $count.text(formFields.length);
-        
-        if (formFields.length === 0) {
-            $list.html('<div class="empty-fields"><i class="fas fa-inbox"></i><p>No fields added yet.<br>Click buttons above to add fields.</p></div>');
-            return;
-        }
-        
-        var html = '';
-        formFields.forEach(function(f, i) {
-            var cfg = FIELD_TYPES.find(function(t) { return t.type === f.field_type; }) || {icon:'fa-font', label:f.field_type};
-            var sel = selectedFieldId === f.id ? ' selected' : '';
-            
-            html += '<div class="field-item' + sel + '" data-id="' + f.id + '">' +
-                '<div class="field-item-icon"><i class="fas ' + cfg.icon + '"></i></div>' +
-                '<div class="field-item-info">' +
-                '<div class="field-item-label">' + f.label + '</div>' +
-                '<div class="field-item-type">' + cfg.label + '</div></div>' +
-                (f.required ? '<span class="field-item-required">Required</span>' : '') +
-                '<div class="field-item-actions">' +
-                '<button type="button" class="up" title="Move Up"' + (i === 0 ? ' disabled style="opacity:0.3"' : '') + '><i class="fas fa-chevron-up"></i></button>' +
-                '<button type="button" class="down" title="Move Down"' + (i === formFields.length - 1 ? ' disabled style="opacity:0.3"' : '') + '><i class="fas fa-chevron-down"></i></button>' +
-                '<button type="button" class="del" title="Delete"><i class="fas fa-trash"></i></button>' +
-                '</div></div>';
-        });
-        $list.html(html);
-        
-        // Bind events
-        $list.find('.field-item').on('click', function(e) {
-            if (!$(e.target).closest('.field-item-actions').length) {
-                selectField($(this).data('id'));
-            }
-        });
-        $list.find('.up').on('click', function(e) { e.stopPropagation(); moveField($(this).closest('.field-item').data('id'), 'up'); });
-        $list.find('.down').on('click', function(e) { e.stopPropagation(); moveField($(this).closest('.field-item').data('id'), 'down'); });
-        $list.find('.del').on('click', function(e) { e.stopPropagation(); deleteField($(this).closest('.field-item').data('id')); });
-        
-        saveSchema();
-    }
-    
-    function showSettings(fieldId) {
-        var f = formFields.find(function(x) { return x.id === fieldId; });
-        if (!f) return;
-        
-        var $panel = $('#fieldSettings');
-        var hasOpts = ['dropdown', 'checkbox', 'radio'].indexOf(f.field_type) !== -1;
-        var isFile = ['file', 'image'].indexOf(f.field_type) !== -1;
-        
-        var optsHtml = '';
-        if (hasOpts) {
-            optsHtml = '<div class="options-container"><label style="font-weight:600;display:block;margin-bottom:8px;font-size:13px;">Options</label>' +
-                '<div style="background:#fffbeb;padding:10px;border-radius:6px;margin-bottom:10px;border:1px solid #fbbf24;">' +
-                '<small style="color:#92400e;"><i class="fas fa-info-circle"></i> <strong>Note:</strong> Value will be used as price (e.g., value=200 means ₹200)</small></div>';
-            (f.options || []).forEach(function(o, i) {
-                var optLabel = typeof o === 'object' ? (o.label || '') : o;
-                var optValue = typeof o === 'object' ? (o.value || '') : o;
-                optsHtml += '<div class="option-row">' +
-                    '<input type="text" value="' + optLabel + '" data-idx="' + i + '" class="opt-label" placeholder="Label" style="flex:1.5;">' +
-                    '<input type="text" value="' + optValue + '" data-idx="' + i + '" class="opt-value" placeholder="Value (will be used as price)" style="flex:1;">' +
-                    '<button type="button" class="opt-remove" data-idx="' + i + '"' + ((f.options || []).length <= 1 ? ' disabled style="opacity:0.3"' : '') + '><i class="fas fa-times"></i></button></div>';
+            formFields.forEach(function(f) {
+                (f.options||[]).forEach(function(o) { if (!o.nested_fields) o.nested_fields = []; });
             });
-            optsHtml += '<button type="button" class="add-option-btn"><i class="fas fa-plus"></i> Add Option</button></div>';
+        } catch(e) { formFields = []; }
+
+        var $fieldset = $schema.closest('fieldset');
+        if (!$fieldset.length) return;
+        $schema.closest('.form-row').hide();
+
+        // Inject tabbed UI
+        var ui = [
+            '<div id="fbOuter">',
+            '<div class="fb-tabs">',
+            '  <div class="fb-tab active" data-tab="builder"><i class="fas fa-magic"></i> Form Builder <span class="fb-tab-badge" id="fb-count-badge">'+formFields.length+'</span></div>',
+            '  <div class="fb-tab" data-tab="preview"><i class="fas fa-eye"></i> Live Preview</div>',
+            '  <div class="fb-tab" data-tab="json"><i class="fas fa-code"></i> JSON Schema</div>',
+            '</div>',
+            '<div class="fb-panel active" data-panel="builder">',
+            '  <div class="fb-header-bar">',
+            '    <div class="fb-hb-icon"><i class="fas fa-wpforms"></i></div>',
+            '    <div><p class="fb-hb-title" style="margin:0">Visual Form Builder</p><p class="fb-hb-sub">Drag-drop reorder &bull; Nested sub-forms on options &bull; Separate Label / Value / Price</p></div>',
+            '    <div class="fb-hb-count" id="fb-hb-count">'+formFields.length+' fields</div>',
+            '  </div>',
+            '  <div class="fb-palette-wrap">',
+            '    <div class="fb-palette-label">Click to add field</div>',
+            '    <div class="fb-palette" id="fbPalette"></div>',
+            '  </div>',
+            '  <div class="fb-list-label">Form Fields <span class="fb-hint-text">&nbsp;&nbsp;⠿ drag handle se reorder karo &bull; card click se settings kholein</span></div>',
+            '  <div class="fb-fields-drop" id="fbDrop"></div>',
+            '</div>',
+            '<div class="fb-panel" data-panel="preview"><div id="fbPreviewWrap"></div></div>',
+            '<div class="fb-panel" data-panel="json">',
+            '  <div class="fb-json-wrap">',
+            '    <button type="button" class="fb-json-copy" id="fbJsonCopy"><i class="fas fa-copy"></i> Copy</button>',
+            '    <pre class="fb-json-out" id="fbJsonOut"></pre>',
+            '  </div>',
+            '</div>',
+            '</div>',
+        ].join('');
+
+        $fieldset.find('.form-row').first().before(ui);
+
+        // Palette
+        FIELD_TYPES.forEach(function(ft) {
+            var $b = $('<button type="button" class="fb-type-btn" data-type="'+ft.type+'"><i class="fas '+ft.icon+'"></i> '+ft.label+'</button>');
+            $b.on('click', function(){ addField(ft.type); });
+            $('#fbPalette').append($b);
+        });
+
+        renderAll();
+
+        // Tab switching
+        $(document).on('click', '.fb-tab', function(){
+            var tab = $(this).data('tab');
+            $('.fb-tab').removeClass('active'); $(this).addClass('active');
+            $('.fb-panel').removeClass('active'); $('[data-panel="'+tab+'"]').addClass('active');
+            if (tab === 'preview') renderPreview();
+            if (tab === 'json')    renderJson();
+        });
+
+        // JSON copy
+        $('#fbJsonCopy').on('click', function(){
+            var t = $('#fbJsonOut').text();
+            navigator.clipboard.writeText(t).then(function(){
+                $('#fbJsonCopy').addClass('copied').html('<i class="fas fa-check"></i> Copied!');
+                setTimeout(function(){ $('#fbJsonCopy').removeClass('copied').html('<i class="fas fa-copy"></i> Copy'); }, 2000);
+            });
+        });
+
+        // Drop zone
+        $('#fbDrop').on('dragover', function(e){ e.preventDefault(); $(this).addClass('drag-over'); })
+                   .on('dragleave', function(){ $(this).removeClass('drag-over'); })
+                   .on('drop', function(e){ e.preventDefault(); $(this).removeClass('drag-over'); });
+    }
+
+    // ---- Render all field cards ----
+    function renderAll() {
+        var $drop = $('#fbDrop');
+        if (!formFields.length) {
+            $drop.html('<div class="fb-empty-state"><i class="fas fa-inbox"></i><p>No fields yet — click a type button above to start building</p></div>');
+            saveSchema(); return;
         }
-        
-        var fileHtml = '';
+        $drop.empty();
+        formFields.forEach(function(f, i){ $drop.append(buildCard(f, i)); });
+        saveSchema();
+        $('#fb-hb-count').text(formFields.length + ' field' + (formFields.length !== 1 ? 's' : ''));
+    }
+
+    // ---- Build one field card ----
+    function buildCard(f, idx) {
+        var m = fmeta(f.field_type);
+        var isSel = (selectedFieldId === f.id);
+
+        var badges = '<span class="fb-badge fb-badge-type">'+f.field_type+'</span>';
+        if (f.required)  badges += ' <span class="fb-badge fb-badge-req">Required</span>';
+        if (f.has_price) badges += ' <span class="fb-badge fb-badge-price"><i class="fas fa-rupee-sign" style="font-size:8px"></i> Priced</span>';
+        var nc = 0; (f.options||[]).forEach(function(o){ nc += (o.nested_fields||[]).length; });
+        if (nc) badges += ' <span class="fb-badge fb-badge-nested"><i class="fas fa-sitemap" style="font-size:8px"></i> '+nc+' nested</span>';
+
+        var $card = $('<div class="fb-card'+(isSel?' is-selected':'')+'" data-id="'+f.id+'" draggable="true"></div>');
+
+        var topHtml = [
+            '<div class="fb-card-top">',
+            '  <span class="fb-drag-handle"><i class="fas fa-grip-vertical"></i></span>',
+            '  <div class="fb-card-icon"><i class="fas '+m.icon+'"></i></div>',
+            '  <div class="fb-card-info">',
+            '    <div class="fb-card-label" id="lbl-'+f.id+'">'+(f.label||'<em style="color:#94a3b8">Unlabeled</em>')+'</div>',
+            '    <div class="fb-card-meta">'+badges+'</div>',
+            '  </div>',
+            '  <div class="fb-card-actions">',
+            '    <button type="button" class="fb-act-btn dup" title="Duplicate"><i class="fas fa-copy"></i></button>',
+            '    <button type="button" class="fb-act-btn mv-up"'+(idx===0?' disabled':'')+' title="Up"><i class="fas fa-chevron-up"></i></button>',
+            '    <button type="button" class="fb-act-btn mv-dn"'+(idx===formFields.length-1?' disabled':'')+' title="Down"><i class="fas fa-chevron-down"></i></button>',
+            '    <button type="button" class="fb-act-btn del" title="Delete"><i class="fas fa-trash"></i></button>',
+            '  </div>',
+            '</div>',
+        ].join('');
+        var $top = $(topHtml);
+        $card.append($top);
+        if (isSel) $card.append(buildSettings(f));
+
+        // Drag
+        $card.on('dragstart', function(e){
+            dragSrcIdx = idx;
+            setTimeout(function(){ $card.addClass('is-dragging'); }, 0);
+            e.originalEvent.dataTransfer.effectAllowed = 'move';
+        });
+        $card.on('dragend', function(){
+            $card.removeClass('is-dragging');
+            $('.fb-card').removeClass('drag-target');
+            dragSrcIdx = null;
+        });
+        $card.on('dragover', function(e){
+            e.preventDefault();
+            if (dragSrcIdx !== null && dragSrcIdx !== idx) { $('.fb-card').removeClass('drag-target'); $card.addClass('drag-target'); }
+        });
+        $card.on('drop', function(e){
+            e.preventDefault(); e.stopPropagation();
+            if (dragSrcIdx === null || dragSrcIdx === idx) return;
+            var moved = formFields.splice(dragSrcIdx, 1)[0];
+            formFields.splice(idx, 0, moved);
+            dragSrcIdx = null; renderAll();
+        });
+
+        // Click header
+        $top.on('click', function(e){
+            if ($(e.target).closest('.fb-card-actions, .fb-drag-handle').length) return;
+            selectedFieldId = (selectedFieldId === f.id) ? null : f.id;
+            renderAll();
+        });
+
+        // Buttons
+        $top.find('.dup').on('click', function(e){
+            e.stopPropagation();
+            var clone = JSON.parse(JSON.stringify(f));
+            clone.id = uid(); clone.label += ' (copy)';
+            clone.name = clone.label.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+            (clone.options||[]).forEach(function(o){ (o.nested_fields||[]).forEach(function(nf){ nf.id = uid(); }); });
+            formFields.splice(idx+1, 0, clone);
+            selectedFieldId = clone.id; renderAll();
+        });
+        $top.find('.mv-up').on('click', function(e){
+            e.stopPropagation(); if (idx===0) return;
+            var t = formFields[idx]; formFields[idx] = formFields[idx-1]; formFields[idx-1] = t; renderAll();
+        });
+        $top.find('.mv-dn').on('click', function(e){
+            e.stopPropagation(); if (idx===formFields.length-1) return;
+            var t = formFields[idx]; formFields[idx] = formFields[idx+1]; formFields[idx+1] = t; renderAll();
+        });
+        $top.find('.del').on('click', function(e){
+            e.stopPropagation();
+            if (!confirm('Delete "'+escH(f.label||f.field_type)+'"?')) return;
+            formFields.splice(idx, 1);
+            if (selectedFieldId === f.id) selectedFieldId = null;
+            renderAll();
+        });
+
+        return $card;
+    }
+
+    // ---- Settings panel ----
+    function buildSettings(f) {
+        var m = fmeta(f.field_type);
+        var isFile = f.field_type==='file' || f.field_type==='image';
+        var $p = $('<div class="fb-settings"></div>');
+
+        // Basic grid
+        var $g = $('<div class="fb-settings-grid"></div>');
+        $g.append(makeSG('Label *','fb-f-lbl-'+f.id, f.label, 'e.g. Full Name'));
+        $g.append(makeSG('Placeholder','fb-f-ph-'+f.id, f.placeholder||'', 'Hint inside field'));
+        $g.append(makeSG('Help Text','fb-f-ht-'+f.id, f.help_text||'', 'Text shown below field'));
+        var $ig = $('<div class="fb-sg"></div>');
+        $ig.append('<label>Field ID</label>');
+        $ig.append('<input class="fb-id-input" readonly value="'+escH(f.name)+'">');
+        $g.append($ig);
+        $p.append($g);
+
+        // Toggles
+        var $tg = $('<div class="fb-toggles"></div>');
+        $tg.append(makeToggle('Required','Make this field mandatory','fb-f-req-'+f.id, f.required));
+        if (m.hasOpts) $tg.append(makeToggle('<i class="fas fa-rupee-sign" style="font-size:11px"></i> Enable Pricing','Each option can have a ₹ price','fb-f-price-'+f.id, f.has_price||false, true));
+        $p.append($tg);
+
+        // File validation
         if (isFile) {
-            fileHtml = '<div style="background:#fef3c7;padding:14px;border-radius:8px;margin-top:14px;">' +
-                '<h5 style="margin:0 0 12px;color:#92400e;font-size:13px;"><i class="fas fa-upload"></i> Upload Settings</h5>' +
-                '<div class="settings-grid">' +
-                '<div class="settings-group"><label>Max Files</label><input type="number" class="max-files" value="' + (f.validation && f.validation.max_files || 1) + '" min="1" max="10"></div>' +
-                '<div class="settings-group"><label>Max Size (MB)</label><input type="number" class="max-size" value="' + (f.validation && f.validation.max_file_size_mb || 5) + '" min="1" max="50"></div>' +
-                '</div></div>';
+            var $vb = $('<div class="fb-val-box"></div>');
+            $vb.append('<div class="fb-val-box-title"><i class="fas fa-upload"></i> Upload Settings</div>');
+            var $vg = $('<div class="fb-val-grid"></div>');
+            $vg.append(makeSG('Max Files','fb-v-mf-'+f.id, (f.validation&&f.validation.max_files)||1,'1','number'));
+            $vg.append(makeSG('Max Size (MB)','fb-v-ms-'+f.id, (f.validation&&f.validation.max_file_size_mb)||5,'5','number'));
+            $vb.append($vg); $p.append($vb);
         }
-        
-        $panel.html(
-            '<h4><i class="fas fa-cog" style="color:#6366f1;"></i> Field Settings</h4>' +
-            '<div class="settings-grid">' +
-            '<div class="settings-group"><label>Label *</label><input type="text" class="f-label" value="' + f.label + '" placeholder="Field label"></div>' +
-            '<div class="settings-group"><label>Field ID</label><input type="text" value="' + f.name + '" readonly style="background:#f1f5f9;cursor:not-allowed;"></div>' +
-            '<div class="settings-group"><label>Placeholder</label><input type="text" class="f-placeholder" value="' + (f.placeholder || '') + '" placeholder="Placeholder text"></div>' +
-            '<div class="settings-group"><label>Help Text</label><input type="text" class="f-help" value="' + (f.help_text || '') + '" placeholder="Help text"></div>' +
-            '</div>' +
-            '<div class="toggle-row"><div><strong style="font-size:14px;">Required Field</strong><br><small style="color:#64748b;">Make this field mandatory</small></div>' +
-            '<label class="toggle-switch"><input type="checkbox" class="f-required"' + (f.required ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>' +
-            (hasOpts ? '<div class="toggle-row" style="background:#dcfce7;border-color:#22c55e;"><div><strong style="font-size:14px;color:#166534;"><i class="fas fa-rupee-sign"></i> Enable Pricing</strong><br><small style="color:#166534;">Value will be used as price automatically</small></div>' +
-            '<label class="toggle-switch"><input type="checkbox" class="f-has-price"' + (f.has_price ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>' : '') +
-            optsHtml + fileHtml
-        ).addClass('active');
-        
-        // Bind events
-        $panel.find('.f-label').on('input', function() { 
-            updateField(fieldId, 'label', $(this).val());
-        });
-        $panel.find('.f-placeholder').on('input', function() { 
-            updateField(fieldId, 'placeholder', $(this).val());
-        });
-        $panel.find('.f-help').on('input', function() { 
-            updateField(fieldId, 'help_text', $(this).val());
-        });
-        $panel.find('.f-required').on('change', function() { updateField(fieldId, 'required', $(this).is(':checked')); });
-        $panel.find('.f-has-price').on('change', function() { updateField(fieldId, 'has_price', $(this).is(':checked')); });
-        $panel.find('.opt-label').on('input', function() { updateOptionLabel(fieldId, $(this).data('idx'), $(this).val()); });
-        $panel.find('.opt-value').on('input', function() { updateOptionValue(fieldId, $(this).data('idx'), $(this).val()); });
-        $panel.find('.opt-remove').on('click', function() { removeOption(fieldId, $(this).data('idx')); });
-        $panel.find('.add-option-btn').on('click', function() { addOption(fieldId); });
-        $panel.find('.max-files').on('change', function() { updateValidation(fieldId, 'max_files', parseInt($(this).val())); });
-        $panel.find('.max-size').on('change', function() { updateValidation(fieldId, 'max_file_size_mb', parseInt($(this).val())); });
-    }
-    
-    function saveSchema() {
-        var $sf = $('#id_form_schema');
-        if ($sf.length) {
-            $sf.val(JSON.stringify(formFields));
+
+        // Options editor
+        if (m.hasOpts) {
+            $p.append('<div class="fb-divider"></div>');
+            $p.append(buildOptsEditor(f));
         }
+
+        // Bind
+        $p.find('.fb-f-lbl-'+f.id).on('input', function(){
+            f.label = $(this).val();
+            f.name = f.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';
+            $('#lbl-'+f.id).text(f.label||'(unlabeled)');
+            saveSchema();
+        });
+        $p.find('.fb-f-ph-'+f.id).on('input', function(){ f.placeholder=$(this).val(); saveSchema(); });
+        $p.find('.fb-f-ht-'+f.id).on('input', function(){ f.help_text=$(this).val(); saveSchema(); });
+        $p.find('.fb-f-req-'+f.id).on('change', function(){ f.required=$(this).is(':checked'); saveSchema(); renderAll(); });
+        $p.find('.fb-f-price-'+f.id).on('change', function(){ f.has_price=$(this).is(':checked'); saveSchema(); renderAll(); });
+        if (isFile) {
+            $p.find('.fb-v-mf-'+f.id).on('change', function(){ f.validation.max_files=parseInt($(this).val())||1; saveSchema(); });
+            $p.find('.fb-v-ms-'+f.id).on('change', function(){ f.validation.max_file_size_mb=parseInt($(this).val())||5; saveSchema(); });
+        }
+        return $p;
     }
-    
+
+    // ---- Options editor ----
+    function buildOptsEditor(f) {
+        var $sec = $('<div></div>');
+        var $hdr = $('<div class="fb-opts-title"><i class="fas fa-list-ul"></i> Options <span class="fb-opts-note">— Nested button se option pe sub-fields lagao</span></div>');
+        $sec.append($hdr);
+
+        // Column header
+        var $ch = $('<div class="fb-opt-cols-hdr" style="display:grid;gap:5px;align-items:center;grid-template-columns:1fr 1fr '+(f.has_price?'70px ':' ')+'100px 26px;margin-bottom:4px;padding:0 2px;"></div>');
+        $ch.append('<span>Label</span>').append('<span>Value / Slug</span>');
+        if (f.has_price) $ch.append('<span>Price ₹</span>');
+        $ch.append('<span>Nested</span>').append('<span></span>');
+        $sec.append($ch);
+
+        var $list = $('<div id="optlist-'+f.id+'"></div>');
+
+        function redraw() {
+            $list.empty();
+            (f.options||[]).forEach(function(o, i){ $list.append(buildOptRow(f, o, i, redraw)); });
+        }
+        redraw();
+        $sec.append($list);
+
+        var $add = $('<button type="button" class="fb-add-opt-btn"><i class="fas fa-plus"></i> Add Option</button>');
+        $add.on('click', function(){
+            f.options.push(defaultOpt(f.options.length+1));
+            saveSchema(); redraw();
+        });
+        $sec.append($add);
+        return $sec;
+    }
+
+    // ---- Single option row ----
+    function buildOptRow(f, opt, oi, redraw) {
+        var k = nKey(f.id, oi);
+        var isOpen = !!openNested[k];
+        var nc = (opt.nested_fields||[]).length;
+
+        var $wrap = $('<div></div>');
+        var gridCols = '1fr 1fr '+(f.has_price?'70px ':' ')+'100px 26px';
+        var $row = $('<div class="fb-opt-row'+(isOpen?' nested-open':'')+'" style="display:grid;gap:5px;align-items:center;grid-template-columns:'+gridCols+'"></div>');
+
+        var $lbl  = $('<input class="fb-opt-input lbl" placeholder="Label" value="'+escH(opt.label)+'">');
+        var $slug = $('<input class="fb-opt-input slug" placeholder="slug" value="'+escH(opt.value)+'">');
+        var $price = f.has_price ? $('<input type="number" class="fb-opt-input price" placeholder="0" value="'+(opt.price||0)+'" min="0">') : null;
+
+        // Nested button
+        var $nb = $('<button type="button" class="fb-nested-btn'+(isOpen?' open':'')+'"></button>');
+        $nb.html(isOpen ? '<i class="fas fa-chevron-up"></i> Nested'+(nc?' <span class="fb-nc">'+nc+'</span>':'') : '<i class="fas fa-sitemap"></i> Nested'+(nc?' <span class="fb-nc">'+nc+'</span>':''));
+
+        var $del = $('<button type="button" class="fb-opt-del-btn" title="Remove"><i class="fas fa-times"></i></button>');
+        if ((f.options||[]).length <= 1) $del.prop('disabled', true);
+
+        $row.append($lbl).append($slug);
+        if ($price) $row.append($price);
+        $row.append($nb).append($del);
+        $wrap.append($row);
+
+        // Nested panel
+        if (isOpen) {
+            if (!opt.nested_fields) opt.nested_fields = [];
+            $wrap.append(buildNestedPanel(f, opt, oi, redraw));
+        }
+
+        // Bindings
+        $lbl.on('input', function(){
+            opt.label = $(this).val();
+            var auto = opt.label.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+            $slug.val(auto); opt.value = auto;
+            saveSchema();
+        });
+        $slug.on('input', function(){ opt.value = $(this).val(); saveSchema(); });
+        if ($price) $price.on('input', function(){ opt.price = parseFloat($(this).val())||0; saveSchema(); });
+        $nb.on('click', function(e){
+            e.preventDefault();
+            openNested[k] = !openNested[k];
+            saveSchema(); redraw();
+        });
+        $del.on('click', function(){
+            f.options.splice(oi, 1);
+            delete openNested[k];
+            saveSchema(); redraw(); renderAll();
+        });
+
+        return $wrap;
+    }
+
+    // ---- Nested panel ----
+    function buildNestedPanel(pf, opt, oi, parentRedraw) {
+        var $np = $('<div class="fb-nested-panel"></div>');
+        $np.append('<div class="fb-nested-panel-hdr"><i class="fas fa-sitemap"></i> Sub-fields shown when <strong style="color:#4f46e5">"'+escH(opt.label||'this option')+'"</strong> is selected</div>');
+
+        var $pal = $('<div class="fb-nested-palette"></div>');
+        var NTYPES = ['text','textarea','email','phone','number','date','file','image','dropdown','checkbox','radio'];
+        NTYPES.forEach(function(t){
+            var nm = fmeta(t);
+            var $b = $('<button type="button" class="fb-nested-type-btn"><i class="fas '+nm.icon+'"></i> '+nm.label+'</button>');
+            $b.on('click', function(){
+                var nf = {
+                    id:uid(), field_type:t,
+                    label:nm.label, name:nm.label.toLowerCase().replace(/[^a-z0-9]+/g,'_'),
+                    placeholder:'', help_text:'', required:false, has_price:false,
+                    validation:{}, options: nm.hasOpts ? [defaultOpt(1),defaultOpt(2)] : []
+                };
+                opt.nested_fields.push(nf);
+                saveSchema();
+                renderNFList($nfList, opt, pf, oi, parentRedraw);
+                renderAll();
+            });
+            $pal.append($b);
+        });
+        $np.append($pal);
+
+        var $nfList = $('<div class="fb-nested-fields"></div>');
+        renderNFList($nfList, opt, pf, oi, parentRedraw);
+        $np.append($nfList);
+        return $np;
+    }
+
+    // ---- Render nested fields list ----
+    function renderNFList($c, opt, pf, oi, pRedraw) {
+        $c.empty();
+        if (!opt.nested_fields || !opt.nested_fields.length) {
+            $c.html('<div style="text-align:center;padding:12px;color:#94a3b8;font-size:12px;">Click a field type above to add nested sub-fields</div>');
+            return;
+        }
+        opt.nested_fields.forEach(function(nf, ni){ $c.append(buildNestedCard(nf, ni, opt, pf, oi, pRedraw, $c)); });
+    }
+
+    // ---- Nested field card ----
+    function buildNestedCard(nf, ni, opt, pf, oi, pRedraw, $c) {
+        var nm = fmeta(nf.field_type);
+        var $nc = $('<div class="fb-nested-card"></div>');
+        var badges2 = '<span class="fb-badge fb-badge-type" style="font-size:9px">'+nf.field_type+'</span>';
+        if (nf.required) badges2 += ' <span class="fb-badge fb-badge-req" style="font-size:9px">Req</span>';
+
+        var $top = $([
+            '<div class="fb-nested-card-top">',
+            '  <i class="fas '+nm.icon+'" style="color:#7c3aed;font-size:12px;width:15px;text-align:center"></i>',
+            '  <span style="flex:1;font-size:12px;font-weight:600;color:#1f2937">'+(nf.label||'<em style="color:#94a3b8">Unlabeled</em>')+'</span>',
+            '  <div style="display:flex;gap:2px;align-items:center">'+badges2+'</div>',
+            '  <div style="display:flex;gap:2px;margin-left:8px">',
+            '    <button type="button" class="fb-act-btn n-up" style="width:22px;height:22px;font-size:10px"'+(ni===0?' disabled':'')+' title="Up"><i class="fas fa-chevron-up"></i></button>',
+            '    <button type="button" class="fb-act-btn n-dn" style="width:22px;height:22px;font-size:10px"'+(ni===opt.nested_fields.length-1?' disabled':'')+' title="Down"><i class="fas fa-chevron-down"></i></button>',
+            '    <button type="button" class="fb-act-btn del n-del" style="width:22px;height:22px;font-size:10px" title="Delete"><i class="fas fa-trash"></i></button>',
+            '  </div>',
+            '  <i class="fas fa-chevron-down" style="color:#a78bfa;font-size:10px;margin-left:6px"></i>',
+            '</div>',
+        ].join(''));
+
+        var $body = $('<div class="fb-nested-card-body"></div>');
+        $body.append(buildNestedSettings(nf, opt, pf, oi, pRedraw, $c));
+        $nc.append($top).append($body);
+
+        $top.on('click', function(e){
+            if ($(e.target).closest('.n-up,.n-dn,.n-del').length) return;
+            $body.toggleClass('open');
+            $top.find('.fa-chevron-down,.fa-chevron-up').toggleClass('fa-chevron-down fa-chevron-up');
+        });
+        $top.find('.n-up').on('click', function(e){
+            e.stopPropagation(); if (ni===0) return;
+            var t=opt.nested_fields[ni]; opt.nested_fields[ni]=opt.nested_fields[ni-1]; opt.nested_fields[ni-1]=t;
+            saveSchema(); renderNFList($c, opt, pf, oi, pRedraw);
+        });
+        $top.find('.n-dn').on('click', function(e){
+            e.stopPropagation(); if (ni===opt.nested_fields.length-1) return;
+            var t=opt.nested_fields[ni]; opt.nested_fields[ni]=opt.nested_fields[ni+1]; opt.nested_fields[ni+1]=t;
+            saveSchema(); renderNFList($c, opt, pf, oi, pRedraw);
+        });
+        $top.find('.n-del').on('click', function(e){
+            e.stopPropagation();
+            opt.nested_fields.splice(ni, 1);
+            saveSchema(); renderNFList($c, opt, pf, oi, pRedraw); renderAll();
+        });
+        return $nc;
+    }
+
+    // ---- Nested field settings ----
+    function buildNestedSettings(nf, opt, pf, oi, pRedraw, $c) {
+        var nm = fmeta(nf.field_type);
+        var $w = $('<div></div>');
+        var $g = $('<div class="fb-nested-settings-grid"></div>');
+        $g.append(makeSG('Label','nfl-'+nf.id, nf.label,'Field label'));
+        $g.append(makeSG('Placeholder','nfp-'+nf.id, nf.placeholder||'','Hint text'));
+        $w.append($g);
+        $w.append(makeToggle('Required','Mandatory','nfr-'+nf.id, nf.required));
+        if (nm.hasOpts) {
+            $w.append(makeToggle('<i class="fas fa-rupee-sign" style="font-size:10px"></i> Pricing','Option pricing','nfpr-'+nf.id, nf.has_price||false, true));
+            $w.append(buildSimpleOpts(nf));
+        }
+        $w.find('.nfl-'+nf.id).on('input', function(){
+            nf.label=$(this).val();
+            nf.name=nf.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';
+            saveSchema(); renderNFList($c,opt,pf,oi,pRedraw);
+        });
+        $w.find('.nfp-'+nf.id).on('input', function(){ nf.placeholder=$(this).val(); saveSchema(); });
+        $w.find('.nfr-'+nf.id).on('change', function(){ nf.required=$(this).is(':checked'); saveSchema(); renderNFList($c,opt,pf,oi,pRedraw); });
+        $w.find('.nfpr-'+nf.id).on('change', function(){ nf.has_price=$(this).is(':checked'); saveSchema(); renderNFList($c,opt,pf,oi,pRedraw); });
+        return $w;
+    }
+
+    // ---- Simple options for nested radio/checkbox/dropdown ----
+    function buildSimpleOpts(nf) {
+        var $sec = $('<div style="margin-top:8px"></div>');
+        $sec.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#374151;margin-bottom:5px">Options</div>');
+        var $l = $('<div></div>');
+        function ro() {
+            $l.empty();
+            (nf.options||[]).forEach(function(o,i){
+                var $r = $('<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px"></div>');
+                var $lb=$('<input class="fb-opt-input lbl" style="flex:1;min-width:0" placeholder="Label" value="'+escH(o.label)+'">');
+                var $vl=$('<input class="fb-opt-input slug" style="flex:.8;min-width:0" placeholder="slug" value="'+escH(o.value)+'">');
+                var $pr=nf.has_price?$('<input type="number" class="fb-opt-input price" style="width:55px" placeholder="₹" value="'+(o.price||0)+'">'):null;
+                var $d=$('<button type="button" class="fb-opt-del-btn"><i class="fas fa-times"></i></button>');
+                if((nf.options||[]).length<=1) $d.prop('disabled',true);
+                $lb.on('input',function(){ o.label=$(this).val(); o.value=o.label.toLowerCase().replace(/[^a-z0-9]+/g,'_'); $vl.val(o.value); saveSchema(); });
+                $vl.on('input',function(){ o.value=$(this).val(); saveSchema(); });
+                if($pr) $pr.on('input',function(){ o.price=parseFloat($(this).val())||0; saveSchema(); });
+                $d.on('click',function(){ nf.options.splice(i,1); saveSchema(); ro(); });
+                $r.append($lb).append($vl);
+                if($pr) $r.append($pr);
+                $r.append($d); $l.append($r);
+            });
+        }
+        ro(); $sec.append($l);
+        var $a=$('<button type="button" class="fb-add-opt-btn" style="font-size:11px;padding:5px;margin-top:3px"><i class="fas fa-plus"></i> Add</button>');
+        $a.on('click',function(){
+            if(!nf.options) nf.options=[];
+            nf.options.push({label:'Option '+(nf.options.length+1),value:'option_'+(nf.options.length+1),price:0,nested_fields:[]});
+            saveSchema(); ro();
+        });
+        $sec.append($a); return $sec;
+    }
+
+    // ---- Add field (top-level) ----
     function addField(type) {
-        var cfg = FIELD_TYPES.find(function(t) { return t.type === type; });
-        var label = cfg ? cfg.label : 'Field';
-        var newField = {
-            id: 'field_' + Date.now(),
-            field_type: type,
-            label: label,
-            name: label.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-            placeholder: '',
-            help_text: '',
-            required: false,
-            order: formFields.length + 1,
-            validation: {},
-            options: ['dropdown', 'checkbox', 'radio'].indexOf(type) !== -1 ? [{label: 'Option 1', value: 'option_1'}] : []
+        var m = fmeta(type);
+        var f = {
+            id:uid(), field_type:type,
+            label:m.label, name:m.label.toLowerCase().replace(/[^a-z0-9]+/g,'_'),
+            placeholder:'', help_text:'', required:false, has_price:false,
+            order:formFields.length+1, validation:{},
+            options: m.hasOpts ? [defaultOpt(1),defaultOpt(2)] : []
         };
-        if (['file', 'image'].indexOf(type) !== -1) {
-            newField.validation = {max_files: 1, max_file_size_mb: 5};
+        if (type==='file'||type==='image') f.validation={max_files:1,max_file_size_mb:5};
+        formFields.push(f);
+        selectedFieldId = f.id;
+        renderAll();
+        setTimeout(function(){
+            var $c=$('.fb-card[data-id="'+f.id+'"]');
+            if($c.length) $c[0].scrollIntoView({behavior:'smooth',block:'nearest'});
+        }, 80);
+    }
+
+    // ---- Live Preview ----
+    function renderPreview() {
+        var $w = $('#fbPreviewWrap'); $w.empty();
+        if (!formFields.length) {
+            $w.html('<div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px"><i class="fas fa-eye-slash" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>Add fields in Builder tab to see preview</div>');
+            return;
         }
-        formFields.push(newField);
-        selectedFieldId = newField.id;
-        renderFields();
-        showSettings(newField.id);
+        $w.append('<p class="fb-preview-title">Form Preview</p>');
+        $w.append('<p class="fb-preview-sub">Exactly how this form will appear to users</p>');
+        formFields.forEach(function(f){ $w.append(renderPvField(f)); });
     }
-    
-    function selectField(id) {
-        selectedFieldId = id;
-        renderFields();
-        showSettings(id);
-    }
-    
-    function deleteField(id) {
-        if (!confirm('Are you sure you want to delete this field?')) return;
-        formFields = formFields.filter(function(f) { return f.id !== id; });
-        if (selectedFieldId === id) {
-            selectedFieldId = null;
-            $('#fieldSettings').removeClass('active');
+
+    function renderPvField(f) {
+        var $w = $('<div class="fb-preview-field"></div>');
+        var $lbl = $('<label></label>').text(f.label||f.field_type);
+        if (f.required) $lbl.append('<span class="req-star">*</span>');
+        $w.append($lbl);
+        var t = f.field_type;
+        if (['text','email','phone','number','date','aadhar','pan','pincode'].indexOf(t) > -1) {
+            var it = t==='email'?'email':t==='number'?'number':t==='date'?'date':t==='phone'?'tel':'text';
+            $w.append($('<input>').attr({type:it, placeholder:f.placeholder||''}));
+        } else if (t==='textarea') {
+            $w.append($('<textarea rows="3"></textarea>').attr('placeholder', f.placeholder||''));
+        } else if (t==='file'||t==='image') {
+            $w.append($('<input type="file"'+(t==='image'?' accept="image/*"':((f.validation&&f.validation.max_files>1)?' multiple':''))+'>'));
+        } else if (t==='dropdown') {
+            var $sel = $('<select></select>').append('<option value="">-- Select --</option>');
+            var $nwrp = $('<div></div>');
+            (f.options||[]).forEach(function(o,i){
+                var txt = o.label + (f.has_price&&o.price?' (₹'+o.price+')':'');
+                $sel.append('<option value="'+escH(o.value)+'">'+escH(txt)+'</option>');
+                if ((o.nested_fields||[]).length) {
+                    var $np = $('<div class="fb-nested-preview" id="pv'+f.id+'_'+i+'"></div>');
+                    $np.append('<div class="fb-nested-preview-lbl"><i class="fas fa-sitemap"></i> Additional info required</div>');
+                    o.nested_fields.forEach(function(nf){ $np.append(renderPvField(nf)); });
+                    $nwrp.append($np);
+                }
+            });
+            $sel.on('change', function(){
+                var v=$(this).val();
+                $nwrp.find('.fb-nested-preview').removeClass('show');
+                (f.options||[]).forEach(function(o,i){ if(o.value===v&&(o.nested_fields||[]).length) $('#pv'+f.id+'_'+i).addClass('show'); });
+            });
+            $w.append($sel).append($nwrp);
+        } else if (t==='radio'||t==='checkbox') {
+            var $opts = $('<div class="fb-preview-opts"></div>');
+            var $nwrp2 = $('<div></div>');
+            (f.options||[]).forEach(function(o,i){
+                var $opt = $('<label class="fb-preview-opt"></label>');
+                var $inp = $('<input>').attr({type:t==='radio'?'radio':'checkbox',name:'pv_'+f.id}).val(o.value);
+                $opt.append($inp).append('<span>'+escH(o.label)+'</span>');
+                if (f.has_price&&o.price) $opt.append('<span class="opt-price-tag">₹'+o.price+'</span>');
+                $opts.append($opt);
+                if ((o.nested_fields||[]).length) {
+                    var $np2 = $('<div class="fb-nested-preview" id="pv2'+f.id+'_'+i+'"></div>');
+                    $np2.append('<div class="fb-nested-preview-lbl"><i class="fas fa-sitemap"></i> Additional details required</div>');
+                    o.nested_fields.forEach(function(nf){ $np2.append(renderPvField(nf)); });
+                    $nwrp2.append($np2);
+                }
+                $inp.on('change', function(){
+                    if(t==='radio') { $nwrp2.find('.fb-nested-preview').removeClass('show'); }
+                    if($(this).is(':checked')) $('#pv2'+f.id+'_'+i).addClass('show');
+                    else $('#pv2'+f.id+'_'+i).removeClass('show');
+                });
+            });
+            $w.append($opts).append($nwrp2);
         }
-        renderFields();
+        if (f.help_text) $w.append('<div class="field-hint">'+escH(f.help_text)+'</div>');
+        return $w;
     }
-    
-    function moveField(id, dir) {
-        var idx = formFields.findIndex(function(f) { return f.id === id; });
-        if ((dir === 'up' && idx === 0) || (dir === 'down' && idx === formFields.length - 1)) return;
-        var newIdx = dir === 'up' ? idx - 1 : idx + 1;
-        var temp = formFields[idx];
-        formFields[idx] = formFields[newIdx];
-        formFields[newIdx] = temp;
-        renderFields();
+
+    // ---- JSON view ----
+    function renderJson() {
+        var json = JSON.stringify(formFields, null, 2);
+        var hl = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(m){
+            var c='color:#f59e0b';
+            if(/^"/.test(m)){ c=/:$/.test(m)?'color:#818cf8':'color:#34d399'; }
+            else if(/true|false/.test(m)) c='color:#fb7185';
+            else if(/null/.test(m)) c='color:#94a3b8';
+            return '<span style="'+c+'">'+m+'</span>';
+        });
+        $('#fbJsonOut').html(hl);
     }
-    
-    function updateField(id, key, value) {
-        var f = formFields.find(function(x) { return x.id === id; });
-        if (!f) return;
-        f[key] = value;
-        if (key === 'label') {
-            f.name = value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field';
-            // Update field list without re-rendering settings
-            var $item = $('.field-item[data-id="' + id + '"]');
-            $item.find('.field-item-label').text(value);
-        }
-        saveSchema();
+
+    // ---- Small helpers ----
+    function makeSG(label, cls, val, ph, type) {
+        var $g = $('<div class="fb-sg"></div>');
+        $g.append('<label>'+label+'</label>');
+        $g.append($('<input class="'+cls+'" type="'+(type||'text')+'" value="'+escH(val)+'" placeholder="'+escH(ph||'')+'">'));
+        return $g;
     }
-    
-    function updateValidation(id, key, value) {
-        var f = formFields.find(function(x) { return x.id === id; });
-        if (!f) return;
-        if (!f.validation) f.validation = {};
-        f.validation[key] = value;
-        saveSchema();
+
+    function makeToggle(title, sub, cls, checked, green) {
+        var $r = $('<div class="fb-toggle-row'+(green?' green':'')+'" ></div>');
+        $r.append('<div class="fb-toggle-lbl"><div class="ttl">'+title+'</div><div class="sub">'+sub+'</div></div>');
+        var $sw = $('<label class="fb-switch"></label>');
+        $sw.append($('<input type="checkbox" class="'+cls+'"'+(checked?' checked':'')+'>')).append('<span class="fb-slider"></span>');
+        $r.append($sw);
+        return $r;
     }
-    
-    function addOption(id) {
-        var f = formFields.find(function(x) { return x.id === id; });
-        if (!f) return;
-        if (!f.options) f.options = [];
-        var num = f.options.length + 1;
-        f.options.push({label: 'Option ' + num, value: 'option_' + num, price: 0});
-        showSettings(id);
-        saveSchema();
-    }
-    
-    function updateOptionLabel(id, idx, value) {
-        var f = formFields.find(function(x) { return x.id === id; });
-        if (!f || !f.options || !f.options[idx]) return;
-        if (typeof f.options[idx] === 'object') {
-            f.options[idx].label = value;
-        } else {
-            f.options[idx] = {label: value, value: value.toLowerCase().replace(/[^a-z0-9]+/g, '_')};
-        }
-        saveSchema();
-    }
-    
-    function updateOptionValue(id, idx, value) {
-        var f = formFields.find(function(x) { return x.id === id; });
-        if (!f || !f.options || !f.options[idx]) return;
-        if (typeof f.options[idx] === 'object') {
-            f.options[idx].value = value;
-            // Auto-set price = value
-            f.options[idx].price = value ? parseFloat(value) || 0 : 0;
-        } else {
-            f.options[idx] = {label: f.options[idx], value: value, price: parseFloat(value) || 0};
-        }
-        saveSchema();
-    }
-    
-    function updateOption(id, idx, value) {
-        var f = formFields.find(function(x) { return x.id === id; });
-        if (!f || !f.options || !f.options[idx]) return;
-        f.options[idx] = {label: value, value: value.toLowerCase().replace(/[^a-z0-9]+/g, '_')};
-        saveSchema();
-    }
-    
-    function removeOption(id, idx) {
-        var f = formFields.find(function(x) { return x.id === id; });
-        if (!f || !f.options || f.options.length <= 1) return;
-        f.options.splice(idx, 1);
-        showSettings(id);
-        saveSchema();
-    }
-    
+
 })(django.jQuery);
 </script>
 {% endblock %}
