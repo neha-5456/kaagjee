@@ -1067,7 +1067,12 @@
         $w.find('.nfl-'+nf.id).on('input', function(){
             nf.label=$(this).val();
             nf.name=nf.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';
-            saveSchema(); renderNFList($c,opt,pf,oi,pRedraw);
+            // Update card title in-place to avoid re-render (which kills focus)
+            $c.find('.fb-nested-card').each(function(){
+                var $span=$(this).find('.fb-nested-card-top span').first();
+                if($(this).find('.nfl-'+nf.id).length) $span.text(nf.label||'Unlabeled');
+            });
+            saveSchema();
         });
         $w.find('.nfp-'+nf.id).on('input', function(){ nf.placeholder=$(this).val(); saveSchema(); });
         $w.find('.nfr-'+nf.id).on('change', function(){ nf.required=$(this).is(':checked'); saveSchema(); renderNFList($c,opt,pf,oi,pRedraw); });
