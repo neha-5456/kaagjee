@@ -1140,14 +1140,17 @@
             $w.append(buildOptsEditor(nf, depth + 1, onChange));
         }
 
-        // Bind basic inputs
+        // Bind basic inputs — label/placeholder/help_text sirf data save karo, DOM re-render mat karo (focus lost hota hai)
         $w.find('.'+lu).on('input', function() {
             nf.label=$(this).val();
             nf.name=nf.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';
-            onChange();
+            // Update card title in-place without re-render
+            $w.closest('[style*="overflow:hidden"]').find('.nfc-lbl-'+nf.id).first().text(nf.label||'(unlabeled)');
+            saveSchema();
         });
-        $w.find('.'+pu).on('input', function() { nf.placeholder=$(this).val(); onChange(); });
-        $w.find('.'+hu).on('input', function() { nf.help_text=$(this).val(); onChange(); });
+        $w.find('.'+pu).on('input', function() { nf.placeholder=$(this).val(); saveSchema(); });
+        $w.find('.'+hu).on('input', function() { nf.help_text=$(this).val(); saveSchema(); });
+        // Toggle changes need re-render (badge/options section changes)
         $w.find('.'+ru).on('change', function() { nf.required=$(this).is(':checked'); onChange(); });
         $w.find('.'+pru).on('change', function() { nf.has_price=$(this).is(':checked'); onChange(); });
         return $w;
