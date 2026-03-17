@@ -367,7 +367,8 @@
         {type:'image',    icon:'fa-image',        label:'Image'},
         {type:'aadhar',   icon:'fa-id-card',      label:'Aadhar'},
         {type:'pan',      icon:'fa-credit-card',  label:'PAN'},
-        {type:'pincode',  icon:'fa-map-pin',      label:'Pincode'}
+        {type:'pincode',  icon:'fa-map-pin',      label:'Pincode'},
+        {type:'message',  icon:'fa-comment-alt',  label:'Message'}
     ];
     
     var formFields = [];
@@ -621,6 +622,16 @@
 
     function defaultOpt(n) { return {label:'Option '+n, value:'option_'+n, price:0, nested_fields:[]}; }
 
+    function updateCardBadges(f) {
+        var badges = '<span class="fb-badge fb-badge-type">'+f.field_type+'</span>';
+        if (f.required) badges += ' <span class="fb-badge fb-badge-req">Required</span>';
+        if (f.has_price) badges += ' <span class="fb-badge fb-badge-price"><i class="fas fa-rupee-sign" style="font-size:8px"></i> Priced</span>';
+        var nc = 0; (f.options||[]).forEach(function(o){ nc += (o.nested_fields||[]).length; });
+        if (nc) badges += ' <span class="fb-badge fb-badge-nested"><i class="fas fa-sitemap" style="font-size:8px"></i> '+nc+' nested</span>';
+        $('.fb-card[data-id="'+f.id+'"]').find('.fb-card-meta').html(badges);
+        saveSchema();
+    }
+
     function saveSchema() {
         var $sf = $('#id_form_schema');
         if ($sf.length) $sf.val(JSON.stringify(formFields));
@@ -826,9 +837,18 @@
 
         // Basic grid
         var $g = $('<div class="fb-settings-grid"></div>');
-        $g.append(makeSG('Label *','fb-f-lbl-'+f.id, f.label, 'e.g. Full Name'));
-        $g.append(makeSG('Placeholder','fb-f-ph-'+f.id, f.placeholder||'', 'Hint inside field'));
-        $g.append(makeSG('Help Text','fb-f-ht-'+f.id, f.help_text||'', 'Text shown below field'));
+        $g.append(makeSG('Label *','fb-f-lbl-'+f.id, f.label, 'e.g. Notice'));
+        if (f.field_type === 'message') {
+            // Message content — full width textarea
+            var $mg = $('<div class="fb-sg" style="grid-column:span 2"></div>');
+            $mg.append('<label>Message Content</label>');
+            var $mta = $('<textarea class="fb-f-ph-'+f.id+'" rows="3" placeholder="Write your message here..." style="padding:8px 10px!important;border:1.5px solid #d1d5db!important;border-radius:7px!important;font-size:12px!important;width:100%!important;box-sizing:border-box!important;font-family:inherit!important;resize:vertical!important;background:#fff!important">'+escH(f.placeholder||'')+'</textarea>');
+            $mg.append($mta);
+            $g.append($mg);
+        } else {
+            $g.append(makeSG('Placeholder','fb-f-ph-'+f.id, f.placeholder||'', 'Hint inside field'));
+            $g.append(makeSG('Help Text','fb-f-ht-'+f.id, f.help_text||'', 'Text shown below field'));
+        }
         var $ig = $('<div class="fb-sg"></div>');
         $ig.append('<label>Field ID</label>');
         $ig.append('<input class="fb-id-input" readonly value="'+escH(f.name)+'">');
@@ -837,9 +857,11 @@
 
         // Toggles
         var $tg = $('<div class="fb-toggles"></div>');
-        $tg.append(makeToggle('Required','Make this field mandatory','fb-f-req-'+f.id, f.required));
+        if (f.field_type !== 'message') {
+            $tg.append(makeToggle('Required','Make this field mandatory','fb-f-req-'+f.id, f.required));
+        }
         if (m.hasOpts) $tg.append(makeToggle('<i class="fas fa-rupee-sign" style="font-size:11px"></i> Enable Pricing','Each option can have a ₹ price','fb-f-price-'+f.id, f.has_price||false, true));
-        $p.append($tg);
+        if ($tg.children().length) $p.append($tg);
 
         // File validation
         if (isFile) {
@@ -854,7 +876,7 @@
         // Options editor
         if (m.hasOpts) {
             $p.append('<div class="fb-divider"></div>');
-            $p.append(buildOptsEditor(f, 0, function(){ renderAll(); }));
+            $p.append(buildOptsEditor(f, 0, function(){ updateCardBadges(f); }));
         }
 
         // Bind
@@ -866,8 +888,13 @@
         });
         $p.find('.fb-f-ph-'+f.id).on('input', function(){ f.placeholder=$(this).val(); saveSchema(); });
         $p.find('.fb-f-ht-'+f.id).on('input', function(){ f.help_text=$(this).val(); saveSchema(); });
-        $p.find('.fb-f-req-'+f.id).on('change', function(){ f.required=$(this).is(':checked'); saveSchema(); renderAll(); });
-        $p.find('.fb-f-price-'+f.id).on('change', function(){ f.has_price=$(this).is(':checked'); saveSchema(); renderAll(); });
+        $p.find('.fb-f-req-'+f.id).on('change', function(){
+            f.required=$(this).is(':checked'); saveSchema(); updateCardBadges(f);
+        });
+        $p.find('.fb-f-price-'+f.id).on('change', function(){
+            f.has_price=$(this).is(':checked'); saveSchema();
+            $('.fb-card[data-id="'+f.id+'"]').find('.fb-settings').replaceWith(buildSettings(f));
+        });
         if (isFile) {
             $p.find('.fb-v-mf-'+f.id).on('change', function(){ f.validation.max_files=parseInt($(this).val())||1; saveSchema(); });
             $p.find('.fb-v-ms-'+f.id).on('change', function(){ f.validation.max_file_size_mb=parseInt($(this).val())||5; saveSchema(); });
@@ -924,7 +951,7 @@
         $add.on('click', function() {
             if (!f.options) f.options = [];
             f.options.push({ label:'Option '+(f.options.length+1), value:'option_'+(f.options.length+1), price:0, nested_fields:[] });
-            saveSchema(); redrawOpts(); onChange();
+            saveSchema(); redrawOpts();
         });
         $sec.append($add);
         return $sec;
@@ -990,7 +1017,7 @@
         $del.on('click', function() {
             f.options.splice(oi, 1);
             delete openNested[pathKey];
-            saveSchema(); redrawParent(); onChange();
+            saveSchema(); redrawParent(); updateCardBadges(f);
         });
         return $wrap;
     }
@@ -1016,7 +1043,7 @@
                     options: ft.hasOpts ? [defaultOpt(1), defaultOpt(2)] : []
                 };
                 opt.nested_fields.push(nf);
-                saveSchema(); redrawNFList(); onChange();
+                saveSchema(); redrawNFList();
             });
             $pal.append($b);
         });
@@ -1066,18 +1093,18 @@
             e.stopPropagation();
             if (ni===0) return;
             var t=parentOpt.nested_fields[ni]; parentOpt.nested_fields[ni]=parentOpt.nested_fields[ni-1]; parentOpt.nested_fields[ni-1]=t;
-            saveSchema(); redrawSiblings(); onChange();
+            saveSchema(); redrawSiblings();
         });
         $dn.on('click', function(e) {
             e.stopPropagation();
             if (ni===parentOpt.nested_fields.length-1) return;
             var t=parentOpt.nested_fields[ni]; parentOpt.nested_fields[ni]=parentOpt.nested_fields[ni+1]; parentOpt.nested_fields[ni+1]=t;
-            saveSchema(); redrawSiblings(); onChange();
+            saveSchema(); redrawSiblings();
         });
         $dl.on('click', function(e) {
             e.stopPropagation();
             parentOpt.nested_fields.splice(ni, 1);
-            saveSchema(); redrawSiblings(); onChange();
+            saveSchema(); redrawSiblings();
         });
         $acts.append($up).append($dn).append($dl);
         $top.append($acts).append($arr);
@@ -1085,9 +1112,8 @@
         // Settings body — RECURSIVE: nested field can have its own opts editor
         var $body = $('<div style="display:none;padding:10px 12px;border-top:1px solid '+th.border+';background:#fff"></div>');
         $body.append(buildNestedFieldSettings(nf, depth, function() {
-            // update label badge when label changes
             $nc.find('.nfc-lbl-'+nf.id).text(nf.label||'(unlabeled)');
-            saveSchema(); redrawSiblings(); onChange();
+            saveSchema();
         }));
 
         $top.on('click', function(e) {
@@ -1130,8 +1156,8 @@
             $vg.append('<div class="fb-sg"><label>Max Files</label><input class="'+mfu+'" type="number" value="'+((nf.validation&&nf.validation.max_files)||1)+'" min="1"></div>');
             $vg.append('<div class="fb-sg"><label>Max Size (MB)</label><input class="'+msu+'" type="number" value="'+((nf.validation&&nf.validation.max_file_size_mb)||5)+'" min="1"></div>');
             $vb.append($vg); $w.append($vb);
-            $w.find('.'+mfu).on('input',function(){ if(!nf.validation)nf.validation={}; nf.validation.max_files=parseInt($(this).val())||1; onChange(); });
-            $w.find('.'+msu).on('input',function(){ if(!nf.validation)nf.validation={}; nf.validation.max_file_size_mb=parseInt($(this).val())||5; onChange(); });
+            $w.find('.'+mfu).on('input',function(){ if(!nf.validation)nf.validation={}; nf.validation.max_files=parseInt($(this).val())||1; saveSchema(); });
+            $w.find('.'+msu).on('input',function(){ if(!nf.validation)nf.validation={}; nf.validation.max_file_size_mb=parseInt($(this).val())||5; saveSchema(); });
         }
 
         // RECURSIVE: if this nested field has options (dropdown/radio/checkbox), show opts editor
@@ -1151,8 +1177,8 @@
         $w.find('.'+pu).on('input', function() { nf.placeholder=$(this).val(); saveSchema(); });
         $w.find('.'+hu).on('input', function() { nf.help_text=$(this).val(); saveSchema(); });
         // Toggle changes need re-render (badge/options section changes)
-        $w.find('.'+ru).on('change', function() { nf.required=$(this).is(':checked'); onChange(); });
-        $w.find('.'+pru).on('change', function() { nf.has_price=$(this).is(':checked'); onChange(); });
+        $w.find('.'+ru).on('change', function() { nf.required=$(this).is(':checked'); saveSchema(); });
+        $w.find('.'+pru).on('change', function() { nf.has_price=$(this).is(':checked'); saveSchema(); });
         return $w;
     }
 
@@ -1198,6 +1224,9 @@
         if (['text','email','phone','number','date','aadhar','pan','pincode'].indexOf(t) > -1) {
             var it = t==='email'?'email':t==='number'?'number':t==='date'?'date':t==='phone'?'tel':'text';
             $w.append($('<input>').attr({type:it, placeholder:f.placeholder||''}));
+        } else if (t==='message') {
+            var $msg = $('<div></div>').css({padding:'10px 12px',background:'#fef9c3',border:'1.5px solid #fbbf24',borderRadius:'8px',fontSize:'13px',color:'#92400e',lineHeight:'1.6'}).text(f.placeholder||f.label||'Message');
+            $w.append($msg);
         } else if (t==='textarea') {
             $w.append($('<textarea rows="3"></textarea>').attr('placeholder', f.placeholder||''));
         } else if (t==='file'||t==='image') {
