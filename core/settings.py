@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'apps.privacy',
     'apps.notifications',
 ]
-
+#FIREBASE_CREDENTIALS_PATH = BASE_DIR / 'firebase-credentials.json'
 # =============================================
 # MIDDLEWARE
 # =============================================

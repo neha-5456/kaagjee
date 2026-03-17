@@ -854,7 +854,7 @@
         // Options editor
         if (m.hasOpts) {
             $p.append('<div class="fb-divider"></div>');
-            $p.append(buildOptsEditor(f));
+            $p.append(buildOptsEditor(f, 0, function(){ renderAll(); }));
         }
 
         // Bind
@@ -875,56 +875,89 @@
         return $p;
     }
 
-    // ---- Options editor ----
-    function buildOptsEditor(f) {
-        var $sec = $('<div></div>');
-        var $hdr = $('<div class="fb-opts-title"><i class="fas fa-list-ul"></i> Options <span class="fb-opts-note">— Nested button se option pe sub-fields lagao</span></div>');
-        $sec.append($hdr);
+    // ==================== RECURSIVE NESTED SYSTEM ====================
+    // Infinite depth: field → options → nested_fields → options → nested_fields → ...
 
-        // Column header
-        var $ch = $('<div class="fb-opt-cols-hdr" style="display:grid;gap:5px;align-items:center;grid-template-columns:1fr 1fr '+(f.has_price?'70px ':' ')+'100px 26px;margin-bottom:4px;padding:0 2px;"></div>');
-        $ch.append('<span>Label</span>').append('<span>Value / Slug</span>');
-        if (f.has_price) $ch.append('<span>Price ₹</span>');
-        $ch.append('<span>Nested</span>').append('<span></span>');
-        $sec.append($ch);
+    var DEPTH_THEME = [
+        {bg:'#f5f3ff', border:'#a5b4fc', hdr:'#4f46e5', hdrBg:'#eef2ff', pill:'#6366f1', panelBg:'#f8f7ff'},
+        {bg:'#faf5ff', border:'#c084fc', hdr:'#7c3aed', hdrBg:'#f5f3ff', pill:'#8b5cf6', panelBg:'#fdf8ff'},
+        {bg:'#fdf4ff', border:'#d946ef', hdr:'#a21caf', hdrBg:'#fdf4ff', pill:'#c026d3', panelBg:'#fef5ff'},
+        {bg:'#fff7ed', border:'#fb923c', hdr:'#c2410c', hdrBg:'#fff7ed', pill:'#f97316', panelBg:'#fffaf5'},
+        {bg:'#f0fdf4', border:'#4ade80', hdr:'#166534', hdrBg:'#dcfce7', pill:'#16a34a', panelBg:'#f5fff8'},
+    ];
+    function dth(d) { return DEPTH_THEME[d % DEPTH_THEME.length]; }
 
-        var $list = $('<div id="optlist-'+f.id+'"></div>');
+    // ---- Recursive options editor (called from buildSettings and from nested field settings) ----
+    function buildOptsEditor(f, depth, onChange) {
+        depth    = depth    || 0;
+        onChange = onChange || function(){ renderAll(); };
+        var th = dth(depth);
+        var $sec = $('<div style="margin-top:'+(depth>0?'8':'0')+'px"></div>');
 
-        function redraw() {
-            $list.empty();
-            (f.options||[]).forEach(function(o, i){ $list.append(buildOptRow(f, o, i, redraw)); });
+        if (depth === 0) {
+            $sec.append('<div class="fb-opts-title" style="color:'+th.hdr+'"><i class="fas fa-list-ul"></i> Options <span class="fb-opts-note">— Nested button se option pe sub-fields lagao</span></div>');
+            var $ch = $('<div style="display:grid;gap:5px;align-items:center;grid-template-columns:1fr 1fr '+(f.has_price?'70px ':' ')+'100px 26px;margin-bottom:4px;padding:0 2px;"></div>');
+            $ch.append('<span style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Label</span>');
+            $ch.append('<span style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Value/Slug</span>');
+            if (f.has_price) $ch.append('<span style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Price ₹</span>');
+            $ch.append('<span style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Nested</span>');
+            $ch.append('');
+            $sec.append($ch);
+        } else {
+            $sec.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:'+th.hdr+';margin-bottom:5px;display:flex;align-items:center;gap:4px"><i class="fas fa-list-ul"></i> Options</div>');
         }
-        redraw();
+
+        var $list = $('<div></div>');
+
+        function redrawOpts() {
+            $list.empty();
+            if (!f.options) f.options = [];
+            f.options.forEach(function(opt, oi) {
+                $list.append(buildOptRow(f, opt, oi, redrawOpts, depth, onChange));
+            });
+        }
+        redrawOpts();
         $sec.append($list);
 
-        var $add = $('<button type="button" class="fb-add-opt-btn"><i class="fas fa-plus"></i> Add Option</button>');
-        $add.on('click', function(){
-            f.options.push(defaultOpt(f.options.length+1));
-            saveSchema(); redraw();
+        var fs = depth === 0 ? '' : 'font-size:11px;padding:5px;';
+        var $add = $('<button type="button" class="fb-add-opt-btn" style="'+fs+'margin-top:4px;border-color:'+th.border+';color:'+th.pill+'"><i class="fas fa-plus"></i> Add Option</button>');
+        $add.on('click', function() {
+            if (!f.options) f.options = [];
+            f.options.push({ label:'Option '+(f.options.length+1), value:'option_'+(f.options.length+1), price:0, nested_fields:[] });
+            saveSchema(); redrawOpts(); onChange();
         });
         $sec.append($add);
         return $sec;
     }
 
-    // ---- Single option row ----
-    function buildOptRow(f, opt, oi, redraw) {
-        var k = nKey(f.id, oi);
-        var isOpen = !!openNested[k];
-        var nc = (opt.nested_fields||[]).length;
+    // ---- One option row (any depth) ----
+    function buildOptRow(f, opt, oi, redrawParent, depth, onChange) {
+        var th      = dth(depth);
+        var pathKey = f.id + '_' + oi;
+        var isOpen  = !!openNested[pathKey];
+        var nc      = (opt.nested_fields||[]).length;
 
+        var gcols = '1fr 1fr ' + (f.has_price ? (depth>0?'55px ':'70px ') : ' ') + (depth>0?'70px':'100px') + ' 26px';
         var $wrap = $('<div></div>');
-        var gridCols = '1fr 1fr '+(f.has_price?'70px ':' ')+'100px 26px';
-        var $row = $('<div class="fb-opt-row'+(isOpen?' nested-open':'')+'" style="display:grid;gap:5px;align-items:center;grid-template-columns:'+gridCols+'"></div>');
+        var rowBg  = isOpen ? th.hdrBg : (depth>0?'#fafafa':'#f9fafb');
+        var rowBdr = isOpen ? th.border : '#e5e7eb';
+        var rowRad = isOpen ? '7px 7px 0 0' : '7px';
+        var rowMb  = isOpen ? '0' : '3px';
+        var $row   = $('<div style="display:grid;gap:4px;align-items:center;grid-template-columns:'+gcols+';padding:'+(depth>0?'4px 5px':'5px 6px')+';background:'+rowBg+';border:1.5px solid '+rowBdr+';border-radius:'+rowRad+';margin-bottom:'+rowMb+'"></div>');
 
-        var $lbl  = $('<input class="fb-opt-input lbl" placeholder="Label" value="'+escH(opt.label)+'">');
-        var $slug = $('<input class="fb-opt-input slug" placeholder="slug" value="'+escH(opt.value)+'">');
-        var $price = f.has_price ? $('<input type="number" class="fb-opt-input price" placeholder="0" value="'+(opt.price||0)+'" min="0">') : null;
+        var inSz   = depth > 0 ? 'font-size:11px!important;padding:4px 6px!important;' : '';
+        var $lbl   = $('<input class="fb-opt-input lbl" style="min-width:0;'+inSz+'" placeholder="Label" value="'+escH(opt.label)+'">');
+        var $slug  = $('<input class="fb-opt-input slug" style="min-width:0;'+inSz+'" placeholder="slug" value="'+escH(opt.value)+'">');
+        var $price = f.has_price ? $('<input type="number" class="fb-opt-input price" style="'+(depth>0?'width:55px;':'width:68px;')+inSz+'" placeholder="0" min="0" value="'+(opt.price||0)+'">') : null;
 
-        // Nested button
-        var $nb = $('<button type="button" class="fb-nested-btn'+(isOpen?' open':'')+'"></button>');
-        $nb.html(isOpen ? '<i class="fas fa-chevron-up"></i> Nested'+(nc?' <span class="fb-nc">'+nc+'</span>':'') : '<i class="fas fa-sitemap"></i> Nested'+(nc?' <span class="fb-nc">'+nc+'</span>':''));
+        // Nested toggle button
+        var btnSz  = depth > 0 ? 'font-size:10px;padding:3px 7px;' : 'font-size:11px;padding:4px 9px;';
+        var $nb    = $('<button type="button" class="fb-nested-btn'+(isOpen?' open':'')+'" style="'+btnSz+'border-color:'+th.border+';background:'+(isOpen?th.pill:'#eef2ff')+';color:'+(isOpen?'#fff':th.hdr)+'"></button>');
+        var nbIco  = isOpen ? 'fa-chevron-up' : 'fa-sitemap';
+        var nbTxt  = (depth === 0 ? 'Nested' : 'Sub') + (nc ? ' <span class="fb-nc" style="background:'+(isOpen?'rgba(255,255,255,.3)':th.hdrBg)+';color:'+(isOpen?'#fff':th.hdr)+'">'+nc+'</span>' : '');
+        $nb.html('<i class="fas '+nbIco+'" style="font-size:9px"></i> '+nbTxt);
 
-        var $del = $('<button type="button" class="fb-opt-del-btn" title="Remove"><i class="fas fa-times"></i></button>');
+        var $del   = $('<button type="button" class="fb-opt-del-btn" title="Remove"><i class="fas fa-times"></i></button>');
         if ((f.options||[]).length <= 1) $del.prop('disabled', true);
 
         $row.append($lbl).append($slug);
@@ -932,185 +965,192 @@
         $row.append($nb).append($del);
         $wrap.append($row);
 
-        // Nested panel
+        // Nested panel — recurse!
         if (isOpen) {
             if (!opt.nested_fields) opt.nested_fields = [];
-            $wrap.append(buildNestedPanel(f, opt, oi, redraw));
+            $wrap.append(buildNestedFieldsPanel(opt, pathKey, depth + 1, function() {
+                saveSchema(); redrawParent(); onChange();
+            }));
         }
 
         // Bindings
-        $lbl.on('input', function(){
+        $lbl.on('input', function() {
             opt.label = $(this).val();
-            var auto = opt.label.toLowerCase().replace(/[^a-z0-9]+/g,'_');
-            $slug.val(auto); opt.value = auto;
+            opt.value = opt.label.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+            $slug.val(opt.value);
             saveSchema();
         });
-        $slug.on('input', function(){ opt.value = $(this).val(); saveSchema(); });
-        if ($price) $price.on('input', function(){ opt.price = parseFloat($(this).val())||0; saveSchema(); });
-        $nb.on('click', function(e){
+        $slug.on('input', function() { opt.value = $(this).val(); saveSchema(); });
+        if ($price) $price.on('input', function() { opt.price = parseFloat($(this).val())||0; saveSchema(); });
+        $nb.on('click', function(e) {
             e.preventDefault();
-            openNested[k] = !openNested[k];
-            saveSchema(); redraw();
+            openNested[pathKey] = !openNested[pathKey];
+            saveSchema(); redrawParent();
         });
-        $del.on('click', function(){
+        $del.on('click', function() {
             f.options.splice(oi, 1);
-            delete openNested[k];
-            saveSchema(); redraw(); renderAll();
+            delete openNested[pathKey];
+            saveSchema(); redrawParent(); onChange();
         });
-
         return $wrap;
     }
 
-    // ---- Nested panel ----
-    function buildNestedPanel(pf, opt, oi, parentRedraw) {
-        var $np = $('<div class="fb-nested-panel"></div>');
-        $np.append('<div class="fb-nested-panel-hdr"><i class="fas fa-sitemap"></i> Sub-fields shown when <strong style="color:#4f46e5">"'+escH(opt.label||'this option')+'"</strong> is selected</div>');
+    // ---- Panel that holds nested fields for one option ----
+    function buildNestedFieldsPanel(opt, pathKey, depth, onChange) {
+        var th   = dth(depth);
+        var $np  = $('<div style="background:'+th.bg+';border:1.5px solid '+th.border+';border-top:none;border-radius:0 0 8px 8px;padding:10px;margin-bottom:3px"></div>');
 
-        var $pal = $('<div class="fb-nested-palette"></div>');
-        var NTYPES = ['text','textarea','email','phone','number','date','file','image','dropdown','checkbox','radio'];
-        NTYPES.forEach(function(t){
-            var nm = fmeta(t);
-            var $b = $('<button type="button" class="fb-nested-type-btn"><i class="fas '+nm.icon+'"></i> '+nm.label+'</button>');
-            $b.on('click', function(){
+        var depthLabel = depth === 1 ? 'L1 Nested' : depth === 2 ? 'L2 Nested' : 'L'+depth+' Nested';
+        $np.append('<div style="display:flex;align-items:center;gap:7px;font-size:11px;color:'+th.hdr+';font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1.5px solid '+th.border+'"><i class="fas fa-sitemap"></i> <span style="background:'+th.pill+';color:#fff;border-radius:10px;padding:1px 8px;font-size:9px">'+depthLabel+'</span> Sub-fields shown when <strong style="color:'+th.pill+'">"'+escH(opt.label||'this option')+'"</strong> is selected</div>');
+
+        // Field type palette — all types available at every depth
+        var $pal = $('<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px"></div>');
+        FIELD_TYPES.forEach(function(ft) {
+            var $b = $('<button type="button" class="fb-nested-type-btn" style="font-size:10px;padding:3px 8px;border-color:'+th.border+';color:'+th.hdr+'"><i class="fas '+ft.icon+'"></i> '+ft.label+'</button>');
+            $b.on('click', function() {
                 var nf = {
-                    id:uid(), field_type:t,
-                    label:nm.label, name:nm.label.toLowerCase().replace(/[^a-z0-9]+/g,'_'),
+                    id: uid(), field_type: ft.type,
+                    label: ft.label, name: ft.label.toLowerCase().replace(/[^a-z0-9]+/g,'_'),
                     placeholder:'', help_text:'', required:false, has_price:false,
-                    validation:{}, options: nm.hasOpts ? [defaultOpt(1),defaultOpt(2)] : []
+                    validation: (ft.type==='file'||ft.type==='image') ? {max_files:1,max_file_size_mb:5} : {},
+                    options: ft.hasOpts ? [defaultOpt(1), defaultOpt(2)] : []
                 };
                 opt.nested_fields.push(nf);
-                saveSchema();
-                renderNFList($nfList, opt, pf, oi, parentRedraw);
-                renderAll();
+                saveSchema(); redrawNFList(); onChange();
             });
             $pal.append($b);
         });
         $np.append($pal);
 
-        var $nfList = $('<div class="fb-nested-fields"></div>');
-        renderNFList($nfList, opt, pf, oi, parentRedraw);
-        $np.append($nfList);
+        var $nfl = $('<div></div>');
+        function redrawNFList() {
+            $nfl.empty();
+            if (!opt.nested_fields || !opt.nested_fields.length) {
+                $nfl.html('<div style="text-align:center;padding:10px;color:'+th.hdr+';font-size:11px;opacity:.5"><i class="fas fa-arrow-up" style="display:block;margin-bottom:3px"></i>Click a type to add sub-field</div>');
+                return;
+            }
+            opt.nested_fields.forEach(function(nf, ni) {
+                $nfl.append(buildNestedFieldCard(nf, ni, opt, pathKey, depth, redrawNFList, onChange));
+            });
+        }
+        redrawNFList();
+        $np.append($nfl);
         return $np;
     }
 
-    // ---- Render nested fields list ----
-    function renderNFList($c, opt, pf, oi, pRedraw) {
-        $c.empty();
-        if (!opt.nested_fields || !opt.nested_fields.length) {
-            $c.html('<div style="text-align:center;padding:12px;color:#94a3b8;font-size:12px;">Click a field type above to add nested sub-fields</div>');
-            return;
-        }
-        opt.nested_fields.forEach(function(nf, ni){ $c.append(buildNestedCard(nf, ni, opt, pf, oi, pRedraw, $c)); });
-    }
+    // ---- Nested field card (any depth) ----
+    function buildNestedFieldCard(nf, ni, parentOpt, pathKey, depth, redrawSiblings, onChange) {
+        var th   = dth(depth);
+        var nm   = fmeta(nf.field_type);
+        var $nc  = $('<div style="background:#fff;border:1.5px solid '+th.border+';border-radius:8px;margin-bottom:5px;overflow:hidden"></div>');
 
-    // ---- Nested field card ----
-    function buildNestedCard(nf, ni, opt, pf, oi, pRedraw, $c) {
-        var nm = fmeta(nf.field_type);
-        var $nc = $('<div class="fb-nested-card"></div>');
-        var badges2 = '<span class="fb-badge fb-badge-type" style="font-size:9px">'+nf.field_type+'</span>';
-        if (nf.required) badges2 += ' <span class="fb-badge fb-badge-req" style="font-size:9px">Req</span>';
+        // badges
+        var bdg = '<span class="fb-badge fb-badge-type" style="font-size:9px">'+nf.field_type+'</span>';
+        if (nf.required) bdg += ' <span class="fb-badge fb-badge-req" style="font-size:9px">Req</span>';
+        if (nf.has_price) bdg += ' <span class="fb-badge fb-badge-price" style="font-size:9px">₹</span>';
+        var nc2 = 0; (nf.options||[]).forEach(function(o){ nc2 += (o.nested_fields||[]).length; });
+        if (nc2) bdg += ' <span class="fb-badge fb-badge-nested" style="font-size:9px">'+nc2+' sub</span>';
 
-        var $top = $([
-            '<div class="fb-nested-card-top">',
-            '  <i class="fas '+nm.icon+'" style="color:#7c3aed;font-size:12px;width:15px;text-align:center"></i>',
-            '  <span style="flex:1;font-size:12px;font-weight:600;color:#1f2937">'+(nf.label||'<em style="color:#94a3b8">Unlabeled</em>')+'</span>',
-            '  <div style="display:flex;gap:2px;align-items:center">'+badges2+'</div>',
-            '  <div style="display:flex;gap:2px;margin-left:8px">',
-            '    <button type="button" class="fb-act-btn n-up" style="width:22px;height:22px;font-size:10px"'+(ni===0?' disabled':'')+' title="Up"><i class="fas fa-chevron-up"></i></button>',
-            '    <button type="button" class="fb-act-btn n-dn" style="width:22px;height:22px;font-size:10px"'+(ni===opt.nested_fields.length-1?' disabled':'')+' title="Down"><i class="fas fa-chevron-down"></i></button>',
-            '    <button type="button" class="fb-act-btn del n-del" style="width:22px;height:22px;font-size:10px" title="Delete"><i class="fas fa-trash"></i></button>',
-            '  </div>',
-            '  <i class="fas fa-chevron-down" style="color:#a78bfa;font-size:10px;margin-left:6px"></i>',
-            '</div>',
-        ].join(''));
+        var $top = $('<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:'+th.hdrBg+';cursor:pointer;user-select:none"></div>');
+        $top.append('<i class="fas '+nm.icon+'" style="color:'+th.pill+';font-size:12px;width:14px;text-align:center;flex-shrink:0"></i>');
+        $top.append('<span style="flex:1;font-size:12px;font-weight:600;color:#1f2937;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="nfc-lbl-'+nf.id+'">'+(nf.label||'<em style="color:#94a3b8">Unlabeled</em>')+'</span>');
+        $top.append($('<div style="display:flex;flex-wrap:wrap;gap:2px"></div>').html(bdg));
 
-        var $body = $('<div class="fb-nested-card-body"></div>');
-        $body.append(buildNestedSettings(nf, opt, pf, oi, pRedraw, $c));
-        $nc.append($top).append($body);
+        var $acts = $('<div style="display:flex;gap:2px;margin-left:6px;flex-shrink:0"></div>');
+        var $up   = $('<button type="button" class="fb-act-btn" style="width:22px;height:22px;font-size:9px"'+(ni===0?' disabled':'')+' title="Up"><i class="fas fa-chevron-up"></i></button>');
+        var $dn   = $('<button type="button" class="fb-act-btn" style="width:22px;height:22px;font-size:9px"'+(ni===parentOpt.nested_fields.length-1?' disabled':'')+' title="Down"><i class="fas fa-chevron-down"></i></button>');
+        var $dl   = $('<button type="button" class="fb-act-btn del" style="width:22px;height:22px;font-size:9px" title="Delete"><i class="fas fa-trash"></i></button>');
+        var $arr  = $('<i class="fas fa-chevron-down" style="color:'+th.pill+';font-size:10px;margin-left:4px;flex-shrink:0"></i>');
 
-        $top.on('click', function(e){
-            if ($(e.target).closest('.n-up,.n-dn,.n-del').length) return;
-            $body.toggleClass('open');
-            $top.find('.fa-chevron-down,.fa-chevron-up').toggleClass('fa-chevron-down fa-chevron-up');
-        });
-        $top.find('.n-up').on('click', function(e){
-            e.stopPropagation(); if (ni===0) return;
-            var t=opt.nested_fields[ni]; opt.nested_fields[ni]=opt.nested_fields[ni-1]; opt.nested_fields[ni-1]=t;
-            saveSchema(); renderNFList($c, opt, pf, oi, pRedraw);
-        });
-        $top.find('.n-dn').on('click', function(e){
-            e.stopPropagation(); if (ni===opt.nested_fields.length-1) return;
-            var t=opt.nested_fields[ni]; opt.nested_fields[ni]=opt.nested_fields[ni+1]; opt.nested_fields[ni+1]=t;
-            saveSchema(); renderNFList($c, opt, pf, oi, pRedraw);
-        });
-        $top.find('.n-del').on('click', function(e){
+        $up.on('click', function(e) {
             e.stopPropagation();
-            opt.nested_fields.splice(ni, 1);
-            saveSchema(); renderNFList($c, opt, pf, oi, pRedraw); renderAll();
+            if (ni===0) return;
+            var t=parentOpt.nested_fields[ni]; parentOpt.nested_fields[ni]=parentOpt.nested_fields[ni-1]; parentOpt.nested_fields[ni-1]=t;
+            saveSchema(); redrawSiblings(); onChange();
         });
+        $dn.on('click', function(e) {
+            e.stopPropagation();
+            if (ni===parentOpt.nested_fields.length-1) return;
+            var t=parentOpt.nested_fields[ni]; parentOpt.nested_fields[ni]=parentOpt.nested_fields[ni+1]; parentOpt.nested_fields[ni+1]=t;
+            saveSchema(); redrawSiblings(); onChange();
+        });
+        $dl.on('click', function(e) {
+            e.stopPropagation();
+            parentOpt.nested_fields.splice(ni, 1);
+            saveSchema(); redrawSiblings(); onChange();
+        });
+        $acts.append($up).append($dn).append($dl);
+        $top.append($acts).append($arr);
+
+        // Settings body — RECURSIVE: nested field can have its own opts editor
+        var $body = $('<div style="display:none;padding:10px 12px;border-top:1px solid '+th.border+';background:#fff"></div>');
+        $body.append(buildNestedFieldSettings(nf, depth, function() {
+            // update label badge when label changes
+            $nc.find('.nfc-lbl-'+nf.id).text(nf.label||'(unlabeled)');
+            saveSchema(); redrawSiblings(); onChange();
+        }));
+
+        $top.on('click', function(e) {
+            if ($(e.target).closest('button').length) return;
+            $body.toggle();
+            $arr.toggleClass('fa-chevron-down fa-chevron-up');
+        });
+        $nc.append($top).append($body);
         return $nc;
     }
 
-    // ---- Nested field settings ----
-    function buildNestedSettings(nf, opt, pf, oi, pRedraw, $c) {
-        var nm = fmeta(nf.field_type);
-        var $w = $('<div></div>');
-        var $g = $('<div class="fb-nested-settings-grid"></div>');
-        $g.append(makeSG('Label','nfl-'+nf.id, nf.label,'Field label'));
-        $g.append(makeSG('Placeholder','nfp-'+nf.id, nf.placeholder||'','Hint text'));
+    // ---- Settings panel for a nested field (any depth) ----
+    function buildNestedFieldSettings(nf, depth, onChange) {
+        var nm   = fmeta(nf.field_type);
+        var th   = dth(depth);
+        var $w   = $('<div></div>');
+        var isFile = nf.field_type==='file'||nf.field_type==='image';
+
+        // Basic grid
+        var $g = $('<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px"></div>');
+        var lu='nfl-'+nf.id, pu='nfph-'+nf.id, hu='nfht-'+nf.id;
+        $g.append('<div class="fb-sg"><label>Label</label><input class="'+lu+'" value="'+escH(nf.label)+'" placeholder="Field label"></div>');
+        $g.append('<div class="fb-sg"><label>Placeholder</label><input class="'+pu+'" value="'+escH(nf.placeholder||'')+'" placeholder="Hint text"></div>');
+        $g.append('<div class="fb-sg" style="grid-column:span 2"><label>Help Text</label><input class="'+hu+'" value="'+escH(nf.help_text||'')+'" placeholder="Shown below field"></div>');
         $w.append($g);
-        $w.append(makeToggle('Required','Mandatory','nfr-'+nf.id, nf.required));
-        if (nm.hasOpts) {
-            $w.append(makeToggle('<i class="fas fa-rupee-sign" style="font-size:10px"></i> Pricing','Option pricing','nfpr-'+nf.id, nf.has_price||false, true));
-            $w.append(buildSimpleOpts(nf));
+
+        // Toggles
+        var $tg = $('<div class="fb-toggles" style="margin-bottom:8px"></div>');
+        var ru='nfr-'+nf.id, pru='nfpr-'+nf.id;
+        $tg.append(makeToggle('Required','Mandatory field',ru, nf.required));
+        if (nm.hasOpts) $tg.append(makeToggle('<i class="fas fa-rupee-sign" style="font-size:10px"></i> Enable Pricing','Option-level prices',pru, nf.has_price||false, true));
+        $w.append($tg);
+
+        // File validation
+        if (isFile) {
+            var $vb = $('<div class="fb-val-box"></div>');
+            $vb.append('<div class="fb-val-box-title"><i class="fas fa-upload"></i> Upload Settings</div>');
+            var $vg = $('<div class="fb-val-grid"></div>');
+            var mfu='nfmf-'+nf.id, msu='nfms-'+nf.id;
+            $vg.append('<div class="fb-sg"><label>Max Files</label><input class="'+mfu+'" type="number" value="'+((nf.validation&&nf.validation.max_files)||1)+'" min="1"></div>');
+            $vg.append('<div class="fb-sg"><label>Max Size (MB)</label><input class="'+msu+'" type="number" value="'+((nf.validation&&nf.validation.max_file_size_mb)||5)+'" min="1"></div>');
+            $vb.append($vg); $w.append($vb);
+            $w.find('.'+mfu).on('input',function(){ if(!nf.validation)nf.validation={}; nf.validation.max_files=parseInt($(this).val())||1; onChange(); });
+            $w.find('.'+msu).on('input',function(){ if(!nf.validation)nf.validation={}; nf.validation.max_file_size_mb=parseInt($(this).val())||5; onChange(); });
         }
-        $w.find('.nfl-'+nf.id).on('input', function(){
+
+        // RECURSIVE: if this nested field has options (dropdown/radio/checkbox), show opts editor
+        if (nm.hasOpts) {
+            $w.append('<div class="fb-divider"></div>');
+            $w.append(buildOptsEditor(nf, depth + 1, onChange));
+        }
+
+        // Bind basic inputs
+        $w.find('.'+lu).on('input', function() {
             nf.label=$(this).val();
             nf.name=nf.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';
-            // Update card title in-place to avoid re-render (which kills focus)
-            $c.find('.fb-nested-card').each(function(){
-                var $span=$(this).find('.fb-nested-card-top span').first();
-                if($(this).find('.nfl-'+nf.id).length) $span.text(nf.label||'Unlabeled');
-            });
-            saveSchema();
+            onChange();
         });
-        $w.find('.nfp-'+nf.id).on('input', function(){ nf.placeholder=$(this).val(); saveSchema(); });
-        $w.find('.nfr-'+nf.id).on('change', function(){ nf.required=$(this).is(':checked'); saveSchema(); renderNFList($c,opt,pf,oi,pRedraw); });
-        $w.find('.nfpr-'+nf.id).on('change', function(){ nf.has_price=$(this).is(':checked'); saveSchema(); renderNFList($c,opt,pf,oi,pRedraw); });
+        $w.find('.'+pu).on('input', function() { nf.placeholder=$(this).val(); onChange(); });
+        $w.find('.'+hu).on('input', function() { nf.help_text=$(this).val(); onChange(); });
+        $w.find('.'+ru).on('change', function() { nf.required=$(this).is(':checked'); onChange(); });
+        $w.find('.'+pru).on('change', function() { nf.has_price=$(this).is(':checked'); onChange(); });
         return $w;
-    }
-
-    // ---- Simple options for nested radio/checkbox/dropdown ----
-    function buildSimpleOpts(nf) {
-        var $sec = $('<div style="margin-top:8px"></div>');
-        $sec.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#374151;margin-bottom:5px">Options</div>');
-        var $l = $('<div></div>');
-        function ro() {
-            $l.empty();
-            (nf.options||[]).forEach(function(o,i){
-                var $r = $('<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px"></div>');
-                var $lb=$('<input class="fb-opt-input lbl" style="flex:1;min-width:0" placeholder="Label" value="'+escH(o.label)+'">');
-                var $vl=$('<input class="fb-opt-input slug" style="flex:.8;min-width:0" placeholder="slug" value="'+escH(o.value)+'">');
-                var $pr=nf.has_price?$('<input type="number" class="fb-opt-input price" style="width:55px" placeholder="₹" value="'+(o.price||0)+'">'):null;
-                var $d=$('<button type="button" class="fb-opt-del-btn"><i class="fas fa-times"></i></button>');
-                if((nf.options||[]).length<=1) $d.prop('disabled',true);
-                $lb.on('input',function(){ o.label=$(this).val(); o.value=o.label.toLowerCase().replace(/[^a-z0-9]+/g,'_'); $vl.val(o.value); saveSchema(); });
-                $vl.on('input',function(){ o.value=$(this).val(); saveSchema(); });
-                if($pr) $pr.on('input',function(){ o.price=parseFloat($(this).val())||0; saveSchema(); });
-                $d.on('click',function(){ nf.options.splice(i,1); saveSchema(); ro(); });
-                $r.append($lb).append($vl);
-                if($pr) $r.append($pr);
-                $r.append($d); $l.append($r);
-            });
-        }
-        ro(); $sec.append($l);
-        var $a=$('<button type="button" class="fb-add-opt-btn" style="font-size:11px;padding:5px;margin-top:3px"><i class="fas fa-plus"></i> Add</button>');
-        $a.on('click',function(){
-            if(!nf.options) nf.options=[];
-            nf.options.push({label:'Option '+(nf.options.length+1),value:'option_'+(nf.options.length+1),price:0,nested_fields:[]});
-            saveSchema(); ro();
-        });
-        $sec.append($a); return $sec;
     }
 
     // ---- Add field (top-level) ----
@@ -1145,7 +1185,8 @@
         formFields.forEach(function(f){ $w.append(renderPvField(f)); });
     }
 
-    function renderPvField(f) {
+    function renderPvField(f, depth) {
+        depth = depth || 0;
         var $w = $('<div class="fb-preview-field"></div>');
         var $lbl = $('<label></label>').text(f.label||f.field_type);
         if (f.required) $lbl.append('<span class="req-star">*</span>');
@@ -1167,7 +1208,7 @@
                 if ((o.nested_fields||[]).length) {
                     var $np = $('<div class="fb-nested-preview" id="pv'+f.id+'_'+i+'"></div>');
                     $np.append('<div class="fb-nested-preview-lbl"><i class="fas fa-sitemap"></i> Additional info required</div>');
-                    o.nested_fields.forEach(function(nf){ $np.append(renderPvField(nf)); });
+                    o.nested_fields.forEach(function(nf){ $np.append(renderPvField(nf, depth+1)); });
                     $nwrp.append($np);
                 }
             });
@@ -1189,7 +1230,7 @@
                 if ((o.nested_fields||[]).length) {
                     var $np2 = $('<div class="fb-nested-preview" id="pv2'+f.id+'_'+i+'"></div>');
                     $np2.append('<div class="fb-nested-preview-lbl"><i class="fas fa-sitemap"></i> Additional details required</div>');
-                    o.nested_fields.forEach(function(nf){ $np2.append(renderPvField(nf)); });
+                    o.nested_fields.forEach(function(nf){ $np2.append(renderPvField(nf, depth+1)); });
                     $nwrp2.append($np2);
                 }
                 $inp.on('change', function(){
