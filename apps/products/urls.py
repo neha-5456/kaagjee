@@ -13,6 +13,8 @@ from .views import (
     ProductsByLocationView,
     CheckProductAvailabilityView,
     CalculatePriceView,
+    PreviewTemplateView,
+    RenderPreviewView,
 )
 
 app_name = 'products'
@@ -63,4 +65,13 @@ urlpatterns = [
     # POST /products/<slug>/calculate-price/
     # Body: {"form_data": {"field_id": "selected_value"}}
     path('<slug:slug>/calculate-price/', CalculatePriceView.as_view(), name='calculate-price'),
+
+    # Get form schema + preview template
+    # GET /products/<slug>/preview-template/
+    path('<slug:slug>/preview-template/', PreviewTemplateView.as_view(), name='preview-template'),
+
+    # Render preview HTML with filled form data
+    # POST /products/<slug>/render-preview/
+    # Body: {"form_data": {"full_name": "Rahul", ...}}
+    path('<slug:slug>/render-preview/', RenderPreviewView.as_view(), name='render-preview'),
 ]

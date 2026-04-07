@@ -1059,6 +1059,28 @@ class MySubmissionsView(generics.ListAPIView):
         })
 
 
+class SubmissionDetailView(APIView):
+    """
+    GET /api/orders/submissions/<submission_id>/
+    Returns a single form submission by its UUID.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, submission_id):
+        try:
+            submission = FormSubmission.objects.select_related('product').get(
+                submission_id=submission_id,
+                user=request.user
+            )
+        except FormSubmission.DoesNotExist:
+            return Response({'success': False, 'error': 'Submission not found'}, status=404)
+
+        return Response({
+            'success': True,
+            'data': FormSubmissionSerializer(submission).data
+        })
+
+
 
 
 class FileUploadView(APIView):
@@ -1326,9 +1348,9 @@ class MultipleFilesUploadView(APIView):
 class DeleteUploadedFileView(APIView):
     """
     Delete an uploaded file (optional - for cleanup)
-    
+
     DELETE /api/orders/delete-file/
-    
+
     Body:
         {"file_path": "uploads/mobile/abc123_doc.pdf"}
     """
@@ -1367,3 +1389,105 @@ class DeleteUploadedFileView(APIView):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================
+# PDF GENERATION API
+# ========================
+
+class GeneratePDFView(APIView):
+    """
+    POST /api/orders/generate-pdf/
+
+    Body:
+    {
+        "product_slug": "pan-card",
+        "form_data": {"full_name": "Rahul", "city": "Delhi", ...}
+    }
+
+    OR use an existing submission:
+    {
+        "submission_id": "<uuid>"
+    }
+
+    Returns a PDF file (application/pdf) generated from the product's
+    preview_template with placeholders replaced by form_data values.
+
+    Requires: weasyprint  →  pip install weasyprint
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            from weasyprint import HTML
+        except ImportError:
+            return Response(
+                {'success': False, 'error': 'PDF generation not available. Install weasyprint.'},
+                status=500
+            )
+
+        from django.http import HttpResponse
+        import re
+
+        submission_id = request.data.get('submission_id')
+        product_slug  = request.data.get('product_slug')
+        form_data     = request.data.get('form_data', {})
+
+        # --- resolve product + form_data ---
+        if submission_id:
+            try:
+                submission = FormSubmission.objects.select_related('product').get(
+                    submission_id=submission_id,
+                    user=request.user
+                )
+                product   = submission.product
+                form_data = submission.form_data
+            except FormSubmission.DoesNotExist:
+                return Response({'success': False, 'error': 'Submission not found'}, status=404)
+        elif product_slug:
+            try:
+                product = Product.objects.get(slug=product_slug, status=Product.Status.ACTIVE)
+            except Product.DoesNotExist:
+                return Response({'success': False, 'error': 'Product not found'}, status=404)
+        else:
+            return Response({'success': False, 'error': 'product_slug or submission_id required'}, status=400)
+
+        if not product.preview_template:
+            return Response({'success': False, 'error': 'No preview template configured for this product'}, status=400)
+
+        # --- render template ---
+        def replacer(match):
+            key = match.group(1).strip()
+            val = form_data.get(key, '')
+            if isinstance(val, list):
+                val = ', '.join(str(v) for v in val)
+            return str(val) if val else ''
+
+        body_html = re.sub(r'\{\{\s*([\w_]+)\s*\}\}', replacer, product.preview_template)
+
+        full_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; font-size: 13px; padding: 40px; color: #1f2937; }}
+                h1, h2, h3 {{ color: #1e40af; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+                td, th {{ border: 1px solid #e5e7eb; padding: 8px 12px; }}
+                th {{ background: #f1f5f9; font-weight: 600; }}
+            </style>
+        </head>
+        <body>
+            <h2>{product.title}</h2>
+            {body_html}
+        </body>
+        </html>
+        """
+
+        pdf_bytes = HTML(string=full_html).write_pdf()
+
+        filename = f"{product.slug}-preview.pdf"
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response

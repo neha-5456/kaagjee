@@ -8,9 +8,9 @@ Features:
 4. Rich Text Editor
 """
 from django.contrib import admin
-from django.utils.html import format_html
-from django.urls import path
-from django.http import JsonResponse
+from django.utils.html import format_html, mark_safe
+from django.urls import path, reverse
+from django.http import JsonResponse, HttpResponseRedirect
 from django import forms
 from .models import Product, ProductImage, ProductFAQ
 from apps.locations.models import State, City
@@ -54,14 +54,15 @@ class ProductFAQInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     form = ProductAdminForm
-    list_display = ['title', 'category', 'status_badge', 'price_display', 'form_fields_badge', 
-                    'orders_count', 'created_at']
+    list_display = ['title', 'category', 'status_badge', 'price_display', 'form_fields_badge',
+                    'orders_count', 'duplicate_btn', 'created_at']
     list_filter = ['status', 'category', 'is_pan_india']
     list_editable = []
     search_fields = ['title', 'short_description']
     prepopulated_fields = {'slug': ('title',)}
     inlines = [ProductImageInline, ProductFAQInline]
     save_on_top = True
+    actions = ['duplicate_selected']
     
     fieldsets = (
         ('📝 Basic Information', {
@@ -81,6 +82,10 @@ class ProductAdmin(admin.ModelAdmin):
         ('📋 Form Builder', {
             'fields': ('form_title', 'form_description', 'form_schema'),
             'description': '<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:15px;border-radius:8px;margin-bottom:15px;"><strong>⭐ Visual Form Builder neeche hai!</strong></div>'
+        }),
+        ('📄 Preview Template', {
+            'fields': ('is_preview_enabled', 'preview_template',),
+            'description': '<div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);color:white;padding:15px;border-radius:8px;margin-bottom:15px;"><strong>📄 Preview Template:</strong> Use <code style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:4px;">{{field_name}}</code> placeholders. Available placeholders will be shown automatically from Form Builder fields.</div>'
         }),
         ('⚙️ Status', {
             'fields': ('status',),
@@ -111,8 +116,60 @@ class ProductAdmin(admin.ModelAdmin):
         custom_urls = [
             path('ajax/get-subcategories/', self.admin_site.admin_view(self.get_subcategories_ajax), name='product-get-subcategories'),
             path('ajax/get-cities/', self.admin_site.admin_view(self.get_cities_ajax), name='product-get-cities'),
+            path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product), name='product-duplicate'),
         ]
         return custom_urls + urls
+
+    def duplicate_product(self, request, product_id):
+        """Duplicate a product with all its data"""
+        from django.utils.text import slugify
+        import copy, json
+
+        try:
+            original = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            self.message_user(request, 'Product not found.', level='error')
+            return HttpResponseRedirect(reverse('admin:products_product_changelist'))
+
+        # Generate unique slug
+        base_slug = original.slug + '-copy'
+        slug = base_slug
+        counter = 1
+        while Product.objects.filter(slug=slug).exists():
+            slug = f'{base_slug}-{counter}'
+            counter += 1
+
+        # Duplicate product
+        new_product = Product.objects.get(pk=product_id)
+        new_product.pk        = None
+        new_product.id        = None
+        new_product.title     = original.title + ' (Copy)'
+        new_product.slug      = slug
+        new_product.status    = Product.Status.DRAFT
+        new_product.orders_count = 0
+        new_product.views_count  = 0
+        new_product.form_schema  = copy.deepcopy(original.form_schema)
+        new_product.preview_template = original.preview_template
+        new_product.save()
+
+        # Copy M2M — states & cities
+        new_product.available_states.set(original.available_states.all())
+        new_product.available_cities.set(original.available_cities.all())
+
+        # Copy FAQs
+        for faq in original.faqs.all():
+            faq.pk = None
+            faq.product = new_product
+            faq.save()
+
+        # Copy images
+        for img in original.images.all():
+            img.pk = None
+            img.product = new_product
+            img.save()
+
+        self.message_user(request, f'✅ "{original.title}" successfully duplicated as "{new_product.title}" (Draft).')
+        return HttpResponseRedirect(reverse('admin:products_product_change', args=[new_product.pk]))
 
     def get_subcategories_ajax(self, request):
         """AJAX: Get subcategories by category"""
@@ -144,6 +201,46 @@ class ProductAdmin(admin.ModelAdmin):
                 'cities': list(cities)
             })
         return JsonResponse({'success': True, 'cities': []})
+
+    def duplicate_btn(self, obj):
+        url = reverse('admin:product-duplicate', args=[obj.pk])
+        return format_html(
+            '<a href="{}" style="background:#f59e0b;color:#fff;padding:4px 12px;border-radius:6px;'
+            'font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap">'
+            '⧉ Duplicate</a>', url
+        )
+    duplicate_btn.short_description = 'Duplicate'
+
+    def duplicate_selected(self, request, queryset):
+        import copy
+        count = 0
+        for original in queryset:
+            base_slug = original.slug + '-copy'
+            slug = base_slug
+            counter = 1
+            while Product.objects.filter(slug=slug).exists():
+                slug = f'{base_slug}-{counter}'
+                counter += 1
+            new_p = Product.objects.get(pk=original.pk)
+            new_p.pk = None
+            new_p.id = None
+            new_p.title = original.title + ' (Copy)'
+            new_p.slug  = slug
+            new_p.status = Product.Status.DRAFT
+            new_p.orders_count = 0
+            new_p.views_count  = 0
+            new_p.form_schema  = copy.deepcopy(original.form_schema)
+            new_p.preview_template = original.preview_template
+            new_p.save()
+            new_p.available_states.set(original.available_states.all())
+            new_p.available_cities.set(original.available_cities.all())
+            for faq in original.faqs.all():
+                faq.pk = None; faq.product = new_p; faq.save()
+            for img in original.images.all():
+                img.pk = None; img.product = new_p; img.save()
+            count += 1
+        self.message_user(request, f'✅ {count} product(s) duplicated as Draft.')
+    duplicate_selected.short_description = '⧉ Duplicate selected products'
 
     def status_badge(self, obj):
         colors = {

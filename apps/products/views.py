@@ -142,6 +142,13 @@ class FormSchemaSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'form_title', 'form_description', 'form_schema']
 
 
+class PreviewTemplateSerializer(serializers.ModelSerializer):
+    """Returns form schema + preview template together"""
+    class Meta:
+        model = Product
+        fields = ['id', 'title', 'slug', 'form_title', 'form_description', 'form_schema', 'preview_template', 'is_preview_enabled']
+
+
 # ========================
 # VIEWS
 # ========================
@@ -558,6 +565,87 @@ class CalculatePriceView(APIView):
         pricing = calculate_total_price(product, form_data)
         
         return Response({'success': True, 'data': pricing})
+
+
+class PreviewTemplateView(generics.RetrieveAPIView):
+    """
+    GET /products/<slug>/preview-template/
+    GET /products/<slug>/preview-template/?submission_id=<uuid>
+    Returns form_schema + preview_template. If submission_id is provided,
+    also returns the user's saved form_data for that submission.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = PreviewTemplateSerializer
+    queryset = Product.objects.filter(status=Product.Status.ACTIVE)
+    lookup_field = 'slug'
+
+    def retrieve(self, request, *args, **kwargs):
+        from apps.orders.models import FormSubmission
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = dict(serializer.data)
+
+        # Agar admin ne preview disable kiya hai
+        if not instance.is_preview_enabled:
+            data['preview_template'] = None
+            data['rendered_preview'] = None
+            return Response({'success': True, 'data': data})
+
+        submission_id = request.query_params.get('submission_id')
+        if submission_id:
+            try:
+                submission = FormSubmission.objects.get(submission_id=submission_id)
+                data['form_data'] = submission.form_data
+                data['submission_id'] = str(submission.submission_id)
+                if data.get('preview_template'):
+                    data['rendered_preview'] = _render_template(data['preview_template'], submission.form_data)
+            except FormSubmission.DoesNotExist:
+                pass
+
+        return Response({'success': True, 'data': data})
+
+
+class RenderPreviewView(APIView):
+    """
+    POST /products/<slug>/render-preview/
+    Body: {"form_data": {"full_name": "Rahul", "city": "Delhi", ...}}
+
+    Replaces {{field_name}} placeholders in preview_template with user values.
+    Returns filled HTML for live preview in the app.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug):
+        try:
+            product = Product.objects.get(slug=slug, status=Product.Status.ACTIVE)
+        except Product.DoesNotExist:
+            return Response({'success': False, 'error': 'Product not found'}, status=404)
+
+        if not product.preview_template:
+            return Response({'success': False, 'error': 'No preview template configured'}, status=400)
+
+        form_data = request.data.get('form_data', {})
+        rendered = _render_template(product.preview_template, form_data)
+
+        return Response({
+            'success': True,
+            'data': {
+                'rendered_html': rendered,
+                'product_title': product.title,
+            }
+        })
+
+
+def _render_template(template, form_data):
+    """Replace {{field_name}} placeholders with actual values from form_data."""
+    import re
+    def replacer(match):
+        key = match.group(1).strip()
+        val = form_data.get(key, '')
+        if isinstance(val, list):
+            val = ', '.join(str(v) for v in val)
+        return str(val) if val else match.group(0)  # keep placeholder if no value yet
+    return re.sub(r'\{\{\s*([\w_]+)\s*\}\}', replacer, template)
 
 
 class CheckProductAvailabilityView(APIView):

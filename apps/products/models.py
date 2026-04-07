@@ -68,6 +68,20 @@ class Product(models.Model):
                                    help_text='DO NOT EDIT MANUALLY - Use Visual Form Builder below')
 
     # ========================
+    # PREVIEW TEMPLATE
+    # ========================
+    preview_template = models.TextField(
+        blank=True,
+        verbose_name='Preview Template (HTML)',
+        help_text='Use {{field_name}} placeholders. e.g. <b>Name:</b> {{full_name}}<br><b>City:</b> {{city}}'
+    )
+    is_preview_enabled = models.BooleanField(
+        default=True,
+        verbose_name='Enable Performa Preview',
+        help_text='Disable karne par user ko performa preview nahi dikhega'
+    )
+
+    # ========================
     # STATUS & FLAGS
     # ========================
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT,

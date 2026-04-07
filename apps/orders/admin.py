@@ -3,7 +3,7 @@ Kaagjee - Orders Admin Configuration
 ====================================
 """
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from .models import FormSubmission, Cart, CartItem, Order, OrderItem, Payment
 
 
@@ -41,10 +41,10 @@ class PaymentInline(admin.TabularInline):
 
 @admin.register(FormSubmission)
 class FormSubmissionAdmin(admin.ModelAdmin):
-    list_display = ['submission_id', 'product', 'user', 'status', 'price_at_submission', 'created_at']
+    list_display = ['submission_id', 'product', 'user', 'status', 'price_at_submission', 'preview_link', 'created_at']
     list_filter = ['status', 'product', 'created_at']
     search_fields = ['submission_id', 'user__phone', 'product__title']
-    readonly_fields = ['submission_id', 'created_at', 'updated_at']
+    readonly_fields = ['submission_id', 'created_at', 'updated_at', 'filled_preview']
     date_hierarchy = 'created_at'
     ordering = ['-created_at']
     
@@ -52,7 +52,10 @@ class FormSubmissionAdmin(admin.ModelAdmin):
         ('Submission Info', {
             'fields': ('submission_id', 'status', 'product', 'user')
         }),
-        ('Form Data', {
+        ('📄 Filled Document Preview', {
+            'fields': ('filled_preview',),
+        }),
+        ('Form Data (Raw JSON)', {
             'fields': ('form_data', 'uploaded_files'),
             'classes': ('collapse',)
         }),
@@ -67,6 +70,55 @@ class FormSubmissionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def filled_preview(self, obj):
+        import re
+        template = obj.product.preview_template if obj.product else ''
+        if not template:
+            return format_html(
+                '<div style="padding:12px;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;color:#92400e;font-size:13px;">'
+                '<i class="fas fa-exclamation-triangle"></i> No preview template set for this product. '
+                'Go to <strong>Products → {}</strong> and add a Preview Template.</div>',
+                obj.product.title if obj.product else 'product'
+            )
+
+        form_data = obj.form_data or {}
+
+        def replacer(match):
+            key = match.group(1).strip()
+            val = form_data.get(key, '')
+            if isinstance(val, list):
+                val = ', '.join(str(v) for v in val)
+            if val:
+                return '<span style="background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:3px;font-weight:600">' + str(val) + '</span>'
+            return '<span style="background:#fecaca;color:#991b1b;padding:1px 5px;border-radius:3px">(' + key + ' - not filled)</span>'
+
+        rendered = re.sub(r'\{\{\s*([\w_]+)\s*\}\}', replacer, template)
+        rendered = rendered.replace('\n', '<br>')
+
+        return mark_safe(
+            '<div style="background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:20px 24px;'
+            'font-size:13px;line-height:1.8;max-width:700px;font-family:Georgia,serif">'
+            '<div style="border-bottom:1px solid #e5e7eb;margin-bottom:14px;padding-bottom:10px;'
+            'display:flex;align-items:center;gap:8px">'
+            '<span style="background:#4f46e5;color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:sans-serif">PREVIEW</span>'
+            '<span style="font-size:12px;color:#6b7280;font-family:sans-serif">' + obj.product.title + ' — submitted by ' + str(obj.user) + '</span>'
+            '</div>'
+            + rendered +
+            '</div>'
+        )
+    filled_preview.short_description = 'Filled Document Preview'
+    filled_preview.allow_tags = True
+
+    def preview_link(self, obj):
+        if obj.product and obj.product.preview_template:
+            return format_html(
+                '<a href="{}" style="background:#4f46e5;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none">'
+                '📄 View</a>',
+                f'/admin/orders/formsubmission/{obj.id}/change/'
+            )
+        return format_html('<span style="color:#9ca3af;font-size:11px">No template</span>')
+    preview_link.short_description = 'Preview'
 
 
 # ========================

@@ -1,6 +1,18 @@
 {% extends "admin/change_form.html" %}
 {% load static %}
 
+{% block object-tools-items %}
+{{ block.super }}
+{% if original %}
+<li>
+    <a href="{% url 'admin:product-duplicate' original.pk %}"
+       style="background:#f59e0b;color:#fff;padding:6px 16px;border-radius:6px;font-weight:600;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+        &#10697; Duplicate This Product
+    </a>
+</li>
+{% endif %}
+{% endblock %}
+
 {% block extrahead %}
 {{ block.super }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -374,6 +386,133 @@
     var formFields = [];
     var selectedFieldId = null;
     
+    // ==================== PREVIEW TEMPLATE EDITOR ====================
+    function initPreviewTemplateEditor() {
+        var $field = $('.field-preview_template');
+        if (!$field.length) return;
+
+        var $ta = $field.find('textarea');
+        if (!$ta.length) return;
+
+        // Build placeholder chips from current formFields
+        function buildChips() {
+            var chips = [];
+            function collectFields(fields) {
+                (fields || []).forEach(function(f) {
+                    if (f.field_type === 'message') return;
+                    if (f.name) chips.push({name: f.name, label: f.label || f.name});
+                    (f.options || []).forEach(function(o) {
+                        collectFields(o.nested_fields || []);
+                    });
+                });
+            }
+            collectFields(formFields);
+            return chips;
+        }
+
+        // Inject UI above textarea
+        var $wrap = $('<div id="pt-wrap" style="max-width:700px"></div>');
+
+        var $header = $('<div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:10px 10px 0 0;padding:12px 16px;display:flex;align-items:center;gap:10px"></div>');
+        $header.append('<i class="fas fa-file-alt" style="color:#fff;font-size:16px"></i>');
+        $header.append('<span style="color:#fff;font-weight:700;font-size:14px">Preview Template Editor</span>');
+        $header.append('<span style="color:rgba(255,255,255,.7);font-size:12px;margin-left:4px">— click placeholder to insert at cursor</span>');
+        $wrap.append($header);
+
+        // Placeholder chips panel
+        var $chips = $('<div id="pt-chips" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-top:none;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px;min-height:42px"></div>');
+        $wrap.append($chips);
+
+        // Textarea styled
+        $ta.css({
+            'width': '100%',
+            'min-height': '160px',
+            'font-family': 'monospace',
+            'font-size': '13px',
+            'padding': '12px',
+            'border': '1.5px solid #bae6fd',
+            'border-top': 'none',
+            'border-radius': '0 0 10px 10px',
+            'box-sizing': 'border-box',
+            'resize': 'vertical',
+            'background': '#fff',
+            'max-width': 'none'
+        });
+
+        // Live preview panel
+        var $pvPanel = $('<div id="pt-live" style="margin-top:10px;background:#fffbeb;border:1.5px solid #fbbf24;border-radius:10px;padding:14px;display:none"></div>');
+        $pvPanel.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#92400e;margin-bottom:8px"><i class="fas fa-eye"></i> Live Preview (sample data)</div>');
+        var $pvContent = $('<div id="pt-live-content" style="font-size:13px;color:#1f2937;line-height:1.7"></div>');
+        $pvPanel.append($pvContent);
+        $wrap.append($pvPanel);
+
+        $ta.before($wrap);
+        $wrap.append($ta);
+        $wrap.append($pvPanel);
+
+        function refreshChips() {
+            $chips.empty();
+            var chips = buildChips();
+            if (!chips.length) {
+                $chips.html('<span style="font-size:11px;color:#94a3b8">Add fields in Form Builder above — placeholders will appear here</span>');
+                return;
+            }
+            chips.forEach(function(c) {
+                var $chip = $('<button type="button" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:monospace"></button>');
+                $chip.text('{{' + c.name + '}}');
+                $chip.attr('title', 'Click to insert: ' + c.label);
+                $chip.on('click', function() {
+                    insertAtCursor($ta[0], '{{' + c.name + '}}');
+                    updateLivePreview();
+                });
+                $chips.append($chip);
+            });
+        }
+
+        function insertAtCursor(el, text) {
+            var start = el.selectionStart;
+            var end   = el.selectionEnd;
+            var val   = el.value;
+            el.value  = val.substring(0, start) + text + val.substring(end);
+            el.selectionStart = el.selectionEnd = start + text.length;
+            el.focus();
+            $(el).trigger('input');
+        }
+
+        function updateLivePreview() {
+            var tmpl = $ta.val();
+            if (!tmpl.trim()) { $pvPanel.hide(); return; }
+
+            // Build sample data from field labels
+            var sampleData = {};
+            (buildChips()).forEach(function(c) {
+                sampleData[c.name] = '<span style="background:#dbeafe;color:#1e40af;padding:0 4px;border-radius:3px;font-weight:600">' + c.label + '</span>';
+            });
+
+            var rendered = tmpl.replace(/\{\{\s*([\w_]+)\s*\}\}/g, function(match, key) {
+                return sampleData[key] || match;
+            });
+            // Convert newlines to <br>
+            rendered = rendered.replace(/\n/g, '<br>');
+            $pvContent.html(rendered);
+            $pvPanel.show();
+        }
+
+        $ta.on('input', updateLivePreview);
+
+        // Refresh chips whenever formFields changes (after renderAll)
+        var origRenderAll = renderAll;
+        renderAll = function() {
+            origRenderAll();
+            refreshChips();
+            updateLivePreview();
+        };
+
+        refreshChips();
+        updateLivePreview();
+        console.log('✅ Preview Template Editor ready!');
+    }
+
     $(document).ready(function() {
         console.log('✅ Document Ready!');
         
@@ -382,6 +521,7 @@
             initCategoryFilter();
             initStateFilter();
             initFormBuilder();
+            initPreviewTemplateEditor();
             console.log('✅ All components initialized!');
         }, 300);
     });
