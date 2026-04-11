@@ -581,30 +581,37 @@ class PreviewTemplateView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         from apps.orders.models import FormSubmission
-        instance = self.get_object()
+
+        submission_id = request.query_params.get('submission_id')
+
+        if submission_id:
+            try:
+                submission = FormSubmission.objects.select_related('product').get(
+                    submission_id=submission_id
+                )
+                instance = submission.product
+            except FormSubmission.DoesNotExist:
+                return Response({'success': False, 'error': 'Submission not found'}, status=404)
+        else:
+            instance = self.get_object()
+
         serializer = self.get_serializer(instance)
         data = dict(serializer.data)
 
-        # Agar admin ne preview disable kiya hai
         if not instance.is_preview_enabled:
             data['preview_template'] = None
             data['rendered_preview'] = None
             return Response({'success': True, 'data': data})
 
-        submission_id = request.query_params.get('submission_id')
         if submission_id:
-            try:
-                submission = FormSubmission.objects.get(submission_id=submission_id)
-                data['form_data'] = submission.form_data
-                data['submission_id'] = str(submission.submission_id)
-                if data.get('preview_template'):
-                    data['rendered_preview'] = _render_template(
-                        data['preview_template'],
-                        submission.form_data,
-                        instance.form_schema
-                    )
-            except FormSubmission.DoesNotExist:
-                pass
+            data['form_data'] = submission.form_data
+            data['submission_id'] = str(submission.submission_id)
+            if data.get('preview_template'):
+                data['rendered_preview'] = _render_template(
+                    data['preview_template'],
+                    submission.form_data,
+                    instance.form_schema
+                )
 
         return Response({'success': True, 'data': data})
 
