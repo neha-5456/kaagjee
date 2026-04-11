@@ -978,6 +978,11 @@
         // Basic grid
         var $g = $('<div class="fb-settings-grid"></div>');
         $g.append(makeSG('Label *','fb-f-lbl-'+f.id, f.label, 'e.g. Notice'));
+        // Performa Key field
+        var $pkg = $('<div class="fb-sg"></div>');
+        $pkg.append('<label>Performa Key <span style="color:#6366f1;font-size:9px;font-weight:700">{{placeholder}}</span></label>');
+        $pkg.append($('<input class="fb-f-pk-'+f.id+'" placeholder="e.g. full_name_of_adhar_card" value="'+escH(f.performa_key||f.name||'')+'" style="font-family:monospace;font-size:11px!important;color:#4f46e5!important">'))
+        $g.append($pkg);
         if (f.field_type === 'message') {
             // Message content — full width textarea
             var $mg = $('<div class="fb-sg" style="grid-column:span 2"></div>');
@@ -1023,11 +1028,22 @@
         $p.find('.fb-f-lbl-'+f.id).on('input', function(){
             f.label = $(this).val();
             f.name = f.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';
+            // Auto-set performa_key only if not manually set
+            if (!f._performa_key_manual) {
+                f.performa_key = f.name;
+                $p.find('.fb-f-pk-'+f.id).val(f.performa_key);
+            }
             $('#lbl-'+f.id).text(f.label||'(unlabeled)');
             saveSchema();
         });
         $p.find('.fb-f-ph-'+f.id).on('input', function(){ f.placeholder=$(this).val(); saveSchema(); });
         $p.find('.fb-f-ht-'+f.id).on('input', function(){ f.help_text=$(this).val(); saveSchema(); });
+        $p.find('.fb-f-pk-'+f.id).on('input', function(){
+            f.performa_key = $(this).val().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+            $(this).val(f.performa_key);
+            f._performa_key_manual = true;
+            saveSchema();
+        });
         $p.find('.fb-f-req-'+f.id).on('change', function(){
             f.required=$(this).is(':checked'); saveSchema(); updateCardBadges(f);
         });

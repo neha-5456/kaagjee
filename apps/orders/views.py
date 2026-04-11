@@ -155,6 +155,23 @@ def get_or_create_cart(user):
     return cart
 
 
+def remap_with_performa_keys(form_data, form_schema):
+    """form_data keys ko performa_key se replace karo agar set hai"""
+    if not form_schema:
+        return form_data
+    key_map = {}
+    def collect_keys(fields):
+        for field in (fields or []):
+            name = field.get('name', '')
+            pk   = field.get('performa_key', '').strip()
+            if name and pk:
+                key_map[name] = pk
+            for opt in (field.get('options') or []):
+                collect_keys(opt.get('nested_fields') or [])
+    collect_keys(form_schema)
+    return {key_map.get(k, k): v for k, v in form_data.items()}
+
+
 # ========================
 # FORM SUBMISSION APIs
 # ========================
@@ -197,6 +214,9 @@ class SubmitFormView(APIView):
                 'success': False,
                 'error': 'Product not found'
             }, status=status.HTTP_404_NOT_FOUND)
+
+        # performa_key se remap karo
+        form_data = remap_with_performa_keys(form_data, product.form_schema)
         
         # Validate required fields from form_schema
         errors = []
@@ -273,7 +293,10 @@ class SubmitFormWithFilesView(APIView):
             form_data = json.loads(request.data.get('form_data', '{}'))
         except:
             form_data = {}
-        
+
+        # performa_key se remap karo
+        form_data = remap_with_performa_keys(form_data, product.form_schema)
+
         # Handle files
         uploaded_files = {}
         submission_uuid = uuid_lib.uuid4().hex[:12]
@@ -439,6 +462,7 @@ class SubmitFormWithFilesView(APIView):
         # Update form_data
         try:
             incoming_form_data = json.loads(request.data.get('form_data', '{}'))
+            incoming_form_data = remap_with_performa_keys(incoming_form_data, submission.product.form_schema)
             form_data.update(incoming_form_data)
         except:
             pass

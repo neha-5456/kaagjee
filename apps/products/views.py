@@ -598,7 +598,11 @@ class PreviewTemplateView(generics.RetrieveAPIView):
                 data['form_data'] = submission.form_data
                 data['submission_id'] = str(submission.submission_id)
                 if data.get('preview_template'):
-                    data['rendered_preview'] = _render_template(data['preview_template'], submission.form_data)
+                    data['rendered_preview'] = _render_template(
+                        data['preview_template'],
+                        submission.form_data,
+                        instance.form_schema
+                    )
             except FormSubmission.DoesNotExist:
                 pass
 
@@ -636,16 +640,42 @@ class RenderPreviewView(APIView):
         })
 
 
-def _render_template(template, form_data):
-    """Replace {{field_name}} placeholders with actual values from form_data."""
+def _render_template(template, form_data, form_schema=None):
+    """Replace {{placeholder}} with form_data values.
+    Matching order:
+    1. Direct form_data key match
+    2. form_schema label normalized (spaces→underscore, lowercase) match
+    3. form_schema label exact match
+    """
     import re
+
+    # Build all possible key->value mappings
+    lookup = dict(form_data)  # direct keys
+
+    if form_schema:
+        for field in form_schema:
+            name         = field.get('name', '')
+            label        = field.get('label', '')
+            performa_key = field.get('performa_key', '')
+            value        = form_data.get(name, '')
+
+            if performa_key:
+                lookup[performa_key] = value          # {{full_name_of_adhar_card}}
+            if label:
+                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                lookup[normalized] = value
+                lookup[label] = value
+            if name:
+                lookup[name] = value
+
     def replacer(match):
         key = match.group(1).strip()
-        val = form_data.get(key, '')
+        val = lookup.get(key, '')
         if isinstance(val, list):
             val = ', '.join(str(v) for v in val)
-        return str(val) if val else match.group(0)  # keep placeholder if no value yet
-    return re.sub(r'\{\{\s*([\w_]+)\s*\}\}', replacer, template)
+        return str(val) if val else match.group(0)
+
+    return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, template)
 
 
 class CheckProductAvailabilityView(APIView):
