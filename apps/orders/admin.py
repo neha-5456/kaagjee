@@ -4,6 +4,7 @@ Kaagjee - Orders Admin Configuration
 """
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
+from django.urls import reverse
 from .models import FormSubmission, Cart, CartItem, Order, OrderItem, Payment
 
 
@@ -141,7 +142,7 @@ class CartAdmin(admin.ModelAdmin):
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
         'order_id', 'user_phone', 'status_badge', 'payment_type',
-        'total_amount', 'paid_amount', 'pending_badge', 'created_at'
+        'total_amount', 'paid_amount', 'pending_badge', 'performa_download_btn', 'created_at'
     ]
     list_filter = ['status', 'payment_type', 'created_at']
     search_fields = ['order_id', 'user__phone', 'user_phone', 'user_email']
@@ -153,6 +154,95 @@ class OrderAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     ordering = ['-created_at']
     inlines = [OrderItemInline, PaymentInline]
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('<str:order_id>/download-performa/<int:item_id>/',
+                 self.admin_site.admin_view(self.download_performa),
+                 name='order-download-performa'),
+        ]
+        return custom_urls + urls
+
+    def download_performa(self, request, order_id, item_id):
+        import re
+        from django.http import HttpResponse
+        try:
+            order = Order.objects.get(order_id=order_id)
+            item  = OrderItem.objects.select_related('product').get(id=item_id, order=order)
+        except (Order.DoesNotExist, OrderItem.DoesNotExist):
+            return HttpResponse('Not found', status=404)
+
+        product = item.product
+        if not product or not product.preview_template:
+            return HttpResponse('No preview template configured.', status=400)
+
+        form_data   = item.form_data or {}
+        form_schema = product.form_schema or []
+
+        lookup = dict(form_data)
+        for field in form_schema:
+            name         = field.get('name', '')
+            label        = field.get('label', '')
+            performa_key = field.get('performa_key', '').strip()
+            value        = form_data.get(name, '') or form_data.get(performa_key, '')
+            if name:         lookup[name]         = value
+            if performa_key: lookup[performa_key] = value
+            if label:
+                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                lookup[normalized] = value
+                lookup[label]      = value
+
+        def replacer(match):
+            key = match.group(1).strip()
+            val = lookup.get(key, '')
+            if isinstance(val, list):
+                val = ', '.join(str(v) for v in val)
+            return f'<strong style="color:#1e40af">{val}</strong>' if val else f'<span style="color:#dc2626">({key})</span>'
+
+        rendered = re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, product.preview_template)
+        rendered = rendered.replace('\n', '<br>')
+
+        html = f"""
+        <!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>Performa - {order.order_id}</title>
+        <style>
+            body {{ font-family: Georgia, serif; font-size: 14px; padding: 60px; color: #1f2937; line-height: 1.8; }}
+            .header {{ text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 16px; margin-bottom: 30px; }}
+            .header h2 {{ color: #1e40af; margin: 0 0 4px; }}
+            .meta {{ font-size: 12px; color: #6b7280; }}
+            @media print {{ .no-print {{ display: none; }} body {{ padding: 20px; }} }}
+        </style></head><body>
+        <div class="no-print" style="background:#1e40af;color:#fff;padding:10px 20px;margin:-60px -60px 40px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-weight:700">📄 Performa — {product.title}</span>
+            <button onclick="window.print()" style="background:#fff;color:#1e40af;border:none;padding:6px 18px;border-radius:6px;font-weight:700;cursor:pointer">🖨️ Print / Save PDF</button>
+        </div>
+        <div class="header">
+            <h2>{product.title}</h2>
+            <div class="meta">Order: {order.order_id} &nbsp;|&nbsp; {order.user_name} &nbsp;|&nbsp; {order.user_phone}</div>
+        </div>
+        {rendered}
+        <div style="margin-top:60px;border-top:1px solid #e5e7eb;padding-top:16px;font-size:12px;color:#9ca3af;text-align:center">
+            Order {order.order_id} — {order.created_at.strftime('%d %b %Y')}
+        </div>
+        </body></html>
+        """
+        return HttpResponse(html, content_type='text/html')
+
+    def performa_download_btn(self, obj):
+        from django.urls import reverse
+        buttons = []
+        for item in obj.items.all():
+            if item.product and item.product.preview_template:
+                url = reverse('admin:order-download-performa', args=[obj.order_id, item.id])
+                buttons.append(
+                    f'<a href="{url}" target="_blank" style="background:#1e40af;color:#fff;padding:4px 12px;'
+                    f'border-radius:6px;font-size:11px;font-weight:600;text-decoration:none">'
+                    f'📄 Performa</a>'
+                )
+        return mark_safe(''.join(buttons)) if buttons else '—'
+    performa_download_btn.short_description = 'Performa'
     
     fieldsets = (
         ('Order Info', {

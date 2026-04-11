@@ -30,6 +30,10 @@ class ProductAdminForm(forms.ModelForm):
             'available_cities': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['subcategory'].required = False
+
 
 # ========================
 # INLINE MODELS

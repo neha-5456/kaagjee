@@ -34,8 +34,9 @@ class Product(models.Model):
     # ========================
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products',
                                  verbose_name='Category')
-    subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True, 
-                                    related_name='products', verbose_name='Subcategory')
+    subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='products', verbose_name='Subcategory',
+                                    help_text='Optional')
 
     # ========================
     # LOCATION AVAILABILITY

@@ -91,12 +91,43 @@ class CartSerializer(serializers.ModelSerializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    rendered_preview = serializers.SerializerMethodField()
+
     class Meta:
         model = OrderItem
         fields = [
             'id', 'product_title', 'product_slug', 'unit_price',
-            'form_data', 'uploaded_files', 'created_at'
+            'form_data', 'uploaded_files', 'rendered_preview', 'created_at'
         ]
+
+    def get_rendered_preview(self, obj):
+        import re
+        product = obj.product
+        if not product or not product.preview_template:
+            return None
+        if hasattr(product, 'is_preview_enabled') and not product.is_preview_enabled:
+            return None
+        form_data   = obj.form_data or {}
+        form_schema = product.form_schema or []
+        lookup = dict(form_data)
+        for field in form_schema:
+            name         = field.get('name', '')
+            label        = field.get('label', '')
+            performa_key = field.get('performa_key', '').strip()
+            value        = form_data.get(name, '') or form_data.get(performa_key, '')
+            if name:         lookup[name]       = value
+            if performa_key: lookup[performa_key] = value
+            if label:
+                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                lookup[normalized] = value
+                lookup[label]      = value
+        def replacer(match):
+            key = match.group(1).strip()
+            val = lookup.get(key, '')
+            if isinstance(val, list):
+                val = ', '.join(str(v) for v in val)
+            return str(val) if val else match.group(0)
+        return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, product.preview_template)
 
 
 class PaymentSerializer(serializers.ModelSerializer):
