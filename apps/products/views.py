@@ -52,7 +52,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             'category', 'category_name', 'category_slug','youtube_link',
             'subcategory', 'subcategory_name', 'subcategory_slug',
             'full_price', 'half_price', 'original_price', 'discount_percentage',
-            'allow_half_payment', 'status', 'is_featured', 'is_popular',
+            'allow_half_payment', 'is_govt_tax_included', 'status', 'is_featured', 'is_popular',
             'is_pan_india', 'available_states_list', 'available_cities_list',
             'processing_time', 'documents_required', 'how_its_work', 'form_fields_count', 'orders_count','data_privacy_policy',
             'faqs'
@@ -100,7 +100,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'subcategory', 'subcategory_name', 'subcategory_slug',
             'is_pan_india', 'available_states', 'available_cities',
             'available_states_data', 'available_cities_data',
-            'full_price', 'half_price', 'original_price', 'discount_percentage', 'allow_half_payment',
+            'full_price', 'half_price', 'original_price', 'discount_percentage', 'allow_half_payment', 'is_govt_tax_included',
             'form_title', 'form_description', 'form_schema', 'priced_fields',
             'status', 'is_featured', 'is_popular',
             'meta_title', 'meta_description', 'meta_keywords',

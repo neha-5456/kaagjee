@@ -81,7 +81,7 @@ class ProductAdmin(admin.ModelAdmin):
             'description': '<div style="background:#fef3c7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> First select State, then City will be automatically filtered!</div>'
         }),
         ('💰 Pricing', {
-            'fields': ('full_price', 'half_price', 'original_price', 'allow_half_payment'),
+            'fields': ('full_price', 'half_price', 'original_price', 'allow_half_payment', 'is_govt_tax_included'),
         }),
         ('📋 Form Builder', {
             'fields': ('form_title', 'form_description', 'form_schema'),

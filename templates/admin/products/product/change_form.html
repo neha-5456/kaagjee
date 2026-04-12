@@ -531,6 +531,7 @@
             initRichTextEditor();
             initCategoryFilter();
             initStateFilter();
+            initPanIndiaToggle();
             initFormBuilder();
             initPreviewTemplateEditor();
             console.log('✅ All components initialized!');
@@ -652,6 +653,46 @@
         if ($cat.val()) $cat.trigger('change');
     }
     
+    // ==================== PAN INDIA TOGGLE ====================
+    function initPanIndiaToggle() {
+        var $checkbox = $('#id_is_pan_india');
+        if (!$checkbox.length) return;
+
+        var $states = $('#id_available_states');
+        var $cities = $('#id_available_cities');
+
+        function selectAll($select) {
+            $select.find('option').prop('selected', true);
+            // Also update custom dropdown UI if present
+            var id = $select.attr('id') === 'id_available_states' ? 'stateDropdown' : 'cityDropdown';
+            $('#' + id + ' .custom-dropdown-content > div').addClass('selected');
+        }
+
+        function deselectAll($select) {
+            $select.find('option').prop('selected', false);
+            var id = $select.attr('id') === 'id_available_states' ? 'stateDropdown' : 'cityDropdown';
+            $('#' + id + ' .custom-dropdown-content > div').removeClass('selected');
+        }
+
+        function togglePanIndia() {
+            if ($checkbox.is(':checked')) {
+                selectAll($states);
+                selectAll($cities);
+            } else {
+                deselectAll($states);
+                deselectAll($cities);
+            }
+        }
+
+        // Run on page load
+        togglePanIndia();
+
+        // Run on change
+        $checkbox.on('change', togglePanIndia);
+
+        console.log('✅ Pan India toggle ready!');
+    }
+
     // ==================== STATE → CITY ====================
     function initStateFilter() {
         var $states = $('#id_available_states');
@@ -873,6 +914,11 @@
         $('#fbDrop').on('dragover', function(e){ e.preventDefault(); $(this).addClass('drag-over'); })
                    .on('dragleave', function(){ $(this).removeClass('drag-over'); })
                    .on('drop', function(e){ e.preventDefault(); $(this).removeClass('drag-over'); });
+
+        // Global click: close all copy menus
+        $(document).off('click.fbCopyMenu').on('click.fbCopyMenu', function() {
+            $('.fb-copy-menu').hide();
+        });
     }
 
     // ---- Render all field cards ----
@@ -1124,6 +1170,18 @@
         return $sec;
     }
 
+    // ---- Deep clone nested fields with new IDs ----
+    function deepCloneNestedFields(fields) {
+        return (fields || []).map(function(nf) {
+            var clone = JSON.parse(JSON.stringify(nf));
+            clone.id = uid();
+            (clone.options || []).forEach(function(o) {
+                o.nested_fields = deepCloneNestedFields(o.nested_fields);
+            });
+            return clone;
+        });
+    }
+
     // ---- One option row (any depth) ----
     function buildOptRow(f, opt, oi, redrawParent, depth, onChange) {
         var th      = dth(depth);
@@ -1131,7 +1189,7 @@
         var isOpen  = !!openNested[pathKey];
         var nc      = (opt.nested_fields||[]).length;
 
-        var gcols = '1fr 1fr ' + (f.has_price ? (depth>0?'55px ':'70px ') : ' ') + (depth>0?'70px':'100px') + ' 26px';
+        var gcols = '1fr 1fr ' + (f.has_price ? (depth>0?'55px ':'70px ') : ' ') + (depth>0?'90px':'120px') + ' 26px';
         var $wrap = $('<div></div>');
         var rowBg  = isOpen ? th.hdrBg : (depth>0?'#fafafa':'#f9fafb');
         var rowBdr = isOpen ? th.border : '#e5e7eb';
@@ -1151,12 +1209,56 @@
         var nbTxt  = (depth === 0 ? 'Nested' : 'Sub') + (nc ? ' <span class="fb-nc" style="background:'+(isOpen?'rgba(255,255,255,.3)':th.hdrBg)+';color:'+(isOpen?'#fff':th.hdr)+'">'+nc+'</span>' : '');
         $nb.html('<i class="fas '+nbIco+'" style="font-size:9px"></i> '+nbTxt);
 
+        // Copy Nested button
+        var $copyWrap = $('<div style="position:relative;display:inline-flex"></div>');
+        var $copyBtn  = $('<button type="button" title="Copy nested to another option" style="display:inline-flex;align-items:center;gap:3px;'+(depth>0?'padding:3px 6px;font-size:10px;':'padding:4px 8px;font-size:11px;')+'border:1.5px solid #f59e0b;border-radius:6px;background:#fffbeb;color:#b45309;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap"><i class="fas fa-copy" style="font-size:9px"></i> Copy</button>');
+
+        var $copyMenu = $('<div class="fb-copy-menu" style="display:none;position:absolute;top:110%;left:0;z-index:99999;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);min-width:170px;padding:5px 0"></div>');
+        $copyWrap.append($copyBtn).append($copyMenu);
+
+        $copyBtn.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Close all other open copy menus
+            $('.fb-copy-menu').not($copyMenu[0]).hide();
+            $copyMenu.empty();
+            if (!f.options || f.options.length <= 1) {
+                $copyMenu.append('<div style="padding:8px 12px;font-size:11px;color:#94a3b8;white-space:nowrap">No other options available</div>');
+            } else {
+                $copyMenu.append('<div style="padding:5px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;border-bottom:1px solid #f1f5f9;margin-bottom:3px;padding-bottom:6px">Copy nested fields to:</div>');
+                f.options.forEach(function(targetOpt, targetIdx) {
+                    if (targetIdx === oi) return;
+                    var $item = $('<div style="padding:7px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:#374151"></div>');
+                    $item.html('<i class="fas fa-arrow-right" style="color:#f59e0b;font-size:10px;flex-shrink:0"></i><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escH(targetOpt.label || 'Option '+(targetIdx+1)) + '</span>');
+                    $item.on('mouseenter', function(){ $(this).css('background','#fef3c7'); });
+                    $item.on('mouseleave', function(){ $(this).css('background',''); });
+                    $item.on('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        targetOpt.nested_fields = deepCloneNestedFields(opt.nested_fields);
+                        saveSchema();
+                        redrawParent();
+                        onChange();
+                        $copyMenu.hide();
+                        $copyBtn.css({background:'#dcfce7',borderColor:'#22c55e',color:'#166534'});
+                        setTimeout(function(){ $copyBtn.css({background:'#fffbeb',borderColor:'#f59e0b',color:'#b45309'}); }, 1500);
+                    });
+                    $copyMenu.append($item);
+                });
+            }
+            $copyMenu.toggle();
+        });
+
         var $del   = $('<button type="button" class="fb-opt-del-btn" title="Remove"><i class="fas fa-times"></i></button>');
         if ((f.options||[]).length <= 1) $del.prop('disabled', true);
 
+        // Actions cell: nested btn + copy btn side by side
+        var $actCell = $('<div style="display:flex;gap:3px;align-items:center"></div>');
+        $actCell.append($nb).append($copyWrap);
+
         $row.append($lbl).append($slug);
         if ($price) $row.append($price);
-        $row.append($nb).append($del);
+        $row.append($actCell).append($del);
         $wrap.append($row);
 
         // Nested panel — recurse!
