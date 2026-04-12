@@ -669,9 +669,9 @@ class CheckoutView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         payment_type = request.data.get('payment_type', 'full')
-        user_name = request.data.get('user_name', getattr(request.user, 'full_name', ''))
-        user_email = request.data.get('user_email', getattr(request.user, 'email', ''))
-        user_phone = request.data.get('user_phone', getattr(request.user, 'phone', ''))
+        user_name = request.data.get('user_name', getattr(request.user, 'full_name', '') or str(request.user.phone_number))
+        user_email = request.data.get('user_email', getattr(request.user, 'email', '') or '')
+        user_phone = request.data.get('user_phone', str(getattr(request.user, 'phone_number', '')))
         user_notes = request.data.get('user_notes', '')
         
         # Validate payment type
