@@ -57,8 +57,8 @@ class Product(models.Model):
     original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                          verbose_name='Original Price (for discount display)')
     allow_half_payment = models.BooleanField(default=True, verbose_name='Allow 50% Advance')
-    is_govt_tax_included = models.BooleanField(default=False, verbose_name='Govt Tax Included',
-                                               help_text='Check karne par price ke paas "Govt. Tax Included" text dikhega')
+    is_govt_tax_included = models.CharField(max_length=200, blank=True, default='', verbose_name='Tax/Fee Label',
+                                               help_text='e.g. Govt. Tax Included, All Fees Included, GST Included etc. Leave blank to hide.')
 
     # ========================
     # FORM BUILDER (JSON)
