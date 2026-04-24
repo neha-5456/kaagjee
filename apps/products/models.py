@@ -75,8 +75,8 @@ class Product(models.Model):
     # ========================
     preview_template = models.TextField(
         blank=True,
-        verbose_name='Preview Template (HTML)',
-        help_text='Use {{field_name}} placeholders. e.g. <b>Name:</b> {{full_name}}<br><b>City:</b> {{city}}'
+        verbose_name='Preview Pages (HTML)',
+        help_text='Multiple pages supported. Use {{field_name}} placeholders.'
     )
     is_preview_enabled = models.BooleanField(
         default=True,

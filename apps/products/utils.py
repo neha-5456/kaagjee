@@ -15,53 +15,37 @@ from decimal import Decimal
 
 
 def calculate_total_price(product, form_data):
-    """
-    Calculate total price - dropdown/radio with has_price replaces base price (variations)
-    
-    Args:
-        product: Product model instance
-        form_data: dict of {field_name: selected_value} from form submission
-    
-    Returns:
-        dict with pricing breakdown
-    """
-    base_price = product.full_price
-    total_price = Decimal('0')  # Start with 0 to add all dropdown prices
+    base_price = Decimal(str(product.full_price))
+    options_price = Decimal('0')
     price_breakdown = []
-    has_any_pricing = False
-    
+
     if not product.form_schema or not isinstance(product.form_schema, list):
         return {
             'base_price': float(base_price),
-            'final_price': float(base_price),
+            'options_price': 0,
             'total_price': float(base_price),
             'price_breakdown': []
         }
-    
-    # Check for variation fields (has_price=True) and ADD all prices
+
     for field in product.form_schema:
         field_name = field.get('name', '')
         field_type = field.get('field_type', '')
         has_price = field.get('has_price', False)
-        
+
         if not has_price or field_type not in ('dropdown', 'radio'):
             continue
-        
+
         selected_value = form_data.get(field_name, '')
         if not selected_value:
             continue
-        
-        # Find matching option - check both value and label
+
         for option in field.get('options', []):
             opt_value = option.get('value', '')
             opt_label = option.get('label', '')
-            
-            # Match by value OR label
             if opt_value == selected_value or opt_label == selected_value:
                 option_price = Decimal(str(option.get('price', 0)))
                 if option_price > 0:
-                    total_price += option_price  # ADD to total instead of replace
-                    has_any_pricing = True
+                    options_price += option_price
                     price_breakdown.append({
                         'field_name': field_name,
                         'field_label': field.get('label', ''),
@@ -70,14 +54,12 @@ def calculate_total_price(product, form_data):
                         'price': float(option_price)
                     })
                 break
-    
-    # If no pricing dropdowns selected, use base price
-    if not has_any_pricing:
-        total_price = base_price
-    
+
+    total_price = base_price + options_price
+
     return {
         'base_price': float(base_price),
-        'final_price': float(total_price),
+        'options_price': float(options_price),
         'total_price': float(total_price),
         'price_breakdown': price_breakdown
     }

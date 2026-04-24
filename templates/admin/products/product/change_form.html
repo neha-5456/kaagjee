@@ -386,142 +386,451 @@
     var formFields = [];
     var selectedFieldId = null;
     
-    // ==================== PREVIEW TEMPLATE EDITOR ====================
+    // ==================== PREVIEW TEMPLATE EDITOR (MULTI-PAGE) ====================
     function initPreviewTemplateEditor() {
         var $field = $('.field-preview_template');
         if (!$field.length) return;
 
-        var $ta = $field.find('textarea');
+        var $ta = $field.find('textarea, input');
         if (!$ta.length) return;
 
-        // Build placeholder chips from current formFields
+        // Parse existing pages
+        var pages = [];
+        try {
+            var v = $.trim($ta.val());
+            if (v && v !== '[]') pages = JSON.parse(v);
+            if (!Array.isArray(pages)) pages = [];
+        } catch(e) { pages = []; }
+
+        var quills = [];
+
         function buildChips() {
             var chips = [];
             function collectFields(fields) {
                 (fields || []).forEach(function(f) {
                     if (f.field_type === 'message') return;
                     if (f.name) chips.push({name: f.name, label: f.label || f.name});
-                    (f.options || []).forEach(function(o) {
-                        collectFields(o.nested_fields || []);
-                    });
+                    (f.options || []).forEach(function(o) { collectFields(o.nested_fields || []); });
                 });
             }
             collectFields(formFields);
             return chips;
         }
 
-        // Header
-        var $wrap = $('<div id="pt-wrap" style="max-width:700px"></div>');
-        var $header = $('<div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:10px 10px 0 0;padding:12px 16px;display:flex;align-items:center;gap:10px"></div>');
-        $header.append('<i class="fas fa-file-alt" style="color:#fff;font-size:16px"></i>');
-        $header.append('<span style="color:#fff;font-weight:700;font-size:14px">Preview Template Editor</span>');
-        $header.append('<span style="color:rgba(255,255,255,.7);font-size:12px;margin-left:4px">— click placeholder to insert at cursor</span>');
-        $wrap.append($header);
+        function savePages() {
+            pages.forEach(function(p, i) {
+                if (quills[i]) p.template = quills[i].root.innerHTML;
+            });
+            $ta.val(JSON.stringify(pages));
+        }
 
-        // Placeholder chips panel
-        var $chips = $('<div id="pt-chips" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-top:none;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px;min-height:42px"></div>');
-        $wrap.append($chips);
+        function renderSample(html) {
+            var sd = {};
+            buildChips().forEach(function(c) {
+                sd[c.name] = '<span style="background:#dbeafe;color:#1e40af;padding:0 3px;border-radius:3px;font-weight:600">' + c.label + '</span>';
+            });
+            return html.replace(/\{\{\s*([\w_]+)\s*\}\}/g, function(m, k) { return sd[k] || m; });
+        }
 
-        // Quill editor container
-        var editorId = 'pt-quill-editor';
-        var $editorWrap = $('<div style="border:1.5px solid #bae6fd;border-top:none;border-radius:0 0 10px 10px;overflow:hidden"></div>');
-        var $editorDiv  = $('<div id="' + editorId + '"></div>');
-        $editorWrap.append($editorDiv);
-        $wrap.append($editorWrap);
-
-        // Live preview panel
-        var $pvPanel = $('<div id="pt-live" style="margin-top:10px;background:#fffbeb;border:1.5px solid #fbbf24;border-radius:10px;padding:14px;display:none"></div>');
-        $pvPanel.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#92400e;margin-bottom:8px"><i class="fas fa-eye"></i> Live Preview (sample data)</div>');
-        var $pvContent = $('<div id="pt-live-content" style="font-size:13px;color:#1f2937;line-height:1.7"></div>');
-        $pvPanel.append($pvContent);
-
+        // ---- Outer wrapper ----
         $ta.hide();
-        $ta.before($wrap);
-        $wrap.after($pvPanel);
+        var $outer = $('<div id="pp-outer" style="max-width:750px"></div>');
 
-        // Init Quill
-        var ptQuill = new Quill('#' + editorId, {
-            theme: 'snow',
-            placeholder: 'Write performa template here... Use placeholder chips above to insert field values.',
-            modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    [{ 'align': [] }],
-                    ['link', 'image'],
-                    ['clean']
-                ]
+        // Header
+        var $hdr = $('<div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:10px 10px 0 0;padding:12px 18px;display:flex;align-items:center;gap:10px"></div>');
+        $hdr.append('<i class="fas fa-copy" style="color:#fff;font-size:16px"></i>');
+        $hdr.append('<span style="color:#fff;font-weight:700;font-size:15px">Multi-Page Performa Editor</span>');
+        $hdr.append('<span style="color:rgba(255,255,255,.7);font-size:12px">— click placeholder to insert</span>');
+        var $pageCount = $('<span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700"></span>');
+        $hdr.append($pageCount);
+        $outer.append($hdr);
+
+        // Chips bar
+        var $chipsBar = $('<div id="pp-chips" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-top:none;padding:8px 12px;display:flex;flex-wrap:wrap;gap:5px;min-height:38px"></div>');
+        $outer.append($chipsBar);
+
+        // Pages container
+        var $pagesWrap = $('<div id="pp-pages" style="border:1.5px solid #bae6fd;border-top:none"></div>');
+        $outer.append($pagesWrap);
+
+        // Add page button
+        var $addBtn = $('<button type="button" style="width:100%;padding:11px;border:2px dashed #7dd3fc;border-top:none;border-radius:0 0 10px 10px;background:#f0f9ff;color:#0369a1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px"><i class="fas fa-plus"></i> Add New Page</button>');
+        $addBtn.on('click', function() {
+            pages.push({title: 'Page ' + (pages.length + 1), template: ''});
+            renderPages();
+            savePages();
+        });
+        $outer.append($addBtn);
+
+        $ta.before($outer);
+
+        // ---- Render all pages ----
+        function renderPages() {
+            $pagesWrap.empty();
+            quills = [];
+            $pageCount.text(pages.length + ' page' + (pages.length !== 1 ? 's' : ''));
+
+            if (!pages.length) {
+                $pagesWrap.html('<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px"><i class="fas fa-file-alt" style="display:block;font-size:30px;margin-bottom:8px;opacity:.3"></i>No pages yet — click "Add New Page" below</div>');
+                return;
             }
-        });
 
-        // Set initial content from textarea
-        var initialVal = $ta.val();
-        if (initialVal) {
-            ptQuill.root.innerHTML = initialVal;
+            pages.forEach(function(page, idx) {
+                var $card = $('<div style="border-bottom:1.5px solid #e0f2fe"></div>');
+
+                // Page header bar
+                var $bar = $('<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;background:#f0f9ff"></div>');
+                var $num = $('<span style="background:#0ea5e9;color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;flex-shrink:0">Page ' + (idx + 1) + '</span>');
+                var $titleInput = $('<input type="text" placeholder="Page title e.g. Affidavit Body" style="flex:1;padding:6px 10px;border:1.5px solid #bae6fd;border-radius:6px;font-size:12px;font-family:inherit;background:#fff" value="' + escH(page.title || '') + '">');
+                $titleInput.on('input', function() { pages[idx].title = $(this).val(); savePages(); });
+
+                var $up = $('<button type="button" title="Move Up" style="width:26px;height:26px;border:1.5px solid #bae6fd;border-radius:5px;background:#fff;cursor:pointer;color:#0369a1;font-size:10px;display:flex;align-items:center;justify-content:center"' + (idx === 0 ? ' disabled' : '') + '><i class="fas fa-chevron-up"></i></button>');
+                var $dn  = $('<button type="button" title="Move Down" style="width:26px;height:26px;border:1.5px solid #bae6fd;border-radius:5px;background:#fff;cursor:pointer;color:#0369a1;font-size:10px;display:flex;align-items:center;justify-content:center"' + (idx === pages.length - 1 ? ' disabled' : '') + '><i class="fas fa-chevron-down"></i></button>');
+                var $dup = $('<button type="button" title="Duplicate Page" style="width:26px;height:26px;border:1.5px solid #bae6fd;border-radius:5px;background:#fff;cursor:pointer;color:#0369a1;font-size:10px;display:flex;align-items:center;justify-content:center"><i class="fas fa-copy"></i></button>');
+                var $del = $('<button type="button" title="Delete Page" style="width:26px;height:26px;border:1.5px solid #fecaca;border-radius:5px;background:#fff;cursor:pointer;color:#ef4444;font-size:10px;display:flex;align-items:center;justify-content:center"><i class="fas fa-trash"></i></button>');
+
+                $up.on('click', function() {
+                    if (idx === 0) return;
+                    savePages();
+                    var t = pages[idx]; pages[idx] = pages[idx-1]; pages[idx-1] = t;
+                    renderPages(); savePages();
+                });
+                $dn.on('click', function() {
+                    if (idx === pages.length - 1) return;
+                    savePages();
+                    var t = pages[idx]; pages[idx] = pages[idx+1]; pages[idx+1] = t;
+                    renderPages(); savePages();
+                });
+                $dup.on('click', function() {
+                    savePages();
+                    var clone = JSON.parse(JSON.stringify(pages[idx]));
+                    clone.title = clone.title + ' (Copy)';
+                    pages.splice(idx + 1, 0, clone);
+                    renderPages(); savePages();
+                });
+                $del.on('click', function() {
+                    if (pages.length === 1) { alert('At least 1 page required.'); return; }
+                    if (!confirm('Delete "' + (page.title || 'Page ' + (idx+1)) + '"?')) return;
+                    savePages();
+                    pages.splice(idx, 1);
+                    renderPages(); savePages();
+                });
+
+                $bar.append($num).append($titleInput).append($up).append($dn).append($dup).append($del);
+                $card.append($bar);
+
+                // Quill editor
+                var edId = 'pp-quill-' + idx + '-' + Date.now();
+                var $edWrap = $('<div style="border-top:1px solid #e0f2fe"></div>');
+                $edWrap.append($('<div id="' + edId + '"></div>'));
+                $card.append($edWrap);
+
+                // Live preview
+                var $pvBox = $('<div style="padding:10px 14px;background:#fffbeb;border-top:1px solid #fde68a;display:none"></div>');
+                $pvBox.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#92400e;margin-bottom:6px"><i class="fas fa-eye"></i> Live Preview</div>');
+                var $pvHtml = $('<div style="font-size:13px;color:#1f2937;line-height:1.7"></div>');
+                $pvBox.append($pvHtml);
+                $card.append($pvBox);
+
+                $pagesWrap.append($card);
+
+                // Init Quill
+                var q = new Quill('#' + edId, {
+                    theme: 'snow',
+                    placeholder: 'Write page ' + (idx+1) + ' content... Use {{placeholder}} chips above',
+                    modules: {
+                        toolbar: [
+                            [{'header': [1,2,3,false]}],
+                            ['bold','italic','underline','strike'],
+                            [{'color':[]},{'background':[]}],
+                            [{'list':'ordered'},{'list':'bullet'}],
+                            [{'align':[]}],
+                            ['link'],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                if (page.template) q.root.innerHTML = page.template;
+
+                q.on('text-change', function() {
+                    pages[idx].template = q.root.innerHTML;
+                    $ta.val(JSON.stringify(pages));
+                    var html = q.root.innerHTML;
+                    if (!html || html === '<p><br></p>') { $pvBox.hide(); return; }
+                    $pvHtml.html(renderSample(html));
+                    $pvBox.show();
+                });
+
+                if (page.template && page.template !== '<p><br></p>') {
+                    $pvHtml.html(renderSample(page.template));
+                    $pvBox.show();
+                }
+
+                quills.push(q);
+            });
         }
 
-        // Sync Quill -> textarea on change
-        ptQuill.on('text-change', function() {
-            $ta.val(ptQuill.root.innerHTML);
-            updateLivePreview();
-        });
-
-        // Sync before form submit
-        $ta.closest('form').on('submit', function() {
-            $ta.val(ptQuill.root.innerHTML);
-        });
-
-        function insertAtCursor(text) {
-            var range = ptQuill.getSelection(true);
-            ptQuill.insertText(range ? range.index : ptQuill.getLength(), text, 'user');
-            updateLivePreview();
-        }
-
+        // Chips refresh
         function refreshChips() {
-            $chips.empty();
+            $chipsBar.empty();
             var chips = buildChips();
             if (!chips.length) {
-                $chips.html('<span style="font-size:11px;color:#94a3b8">Add fields in Form Builder above — placeholders will appear here</span>');
+                $chipsBar.html('<span style="font-size:11px;color:#94a3b8">Add fields in Form Builder above to get placeholders</span>');
                 return;
             }
             chips.forEach(function(c) {
-                var $chip = $('<button type="button" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:monospace"></button>');
+                var $chip = $('<button type="button" style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;background:#0ea5e9;color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:monospace"></button>');
                 $chip.text('{{' + c.name + '}}');
-                $chip.attr('title', 'Click to insert: ' + c.label);
                 $chip.on('click', function() {
-                    insertAtCursor('{{' + c.name + '}}');
+                    var target = null;
+                    quills.forEach(function(q) { if (q.hasFocus()) target = q; });
+                    if (!target && quills.length) target = quills[quills.length - 1];
+                    if (!target) return;
+                    var range = target.getSelection(true);
+                    target.insertText(range ? range.index : target.getLength(), '{{' + c.name + '}}', 'user');
                 });
-                $chips.append($chip);
+                $chipsBar.append($chip);
             });
         }
 
-        function updateLivePreview() {
-            var tmpl = ptQuill.root.innerHTML;
-            if (!tmpl || tmpl === '<p><br></p>') { $pvPanel.hide(); return; }
-            var sampleData = {};
-            (buildChips()).forEach(function(c) {
-                sampleData[c.name] = '<span style="background:#dbeafe;color:#1e40af;padding:0 4px;border-radius:3px;font-weight:600">' + c.label + '</span>';
-            });
-            var rendered = tmpl.replace(/\{\{\s*([\w_]+)\s*\}\}/g, function(match, key) {
-                return sampleData[key] || match;
-            });
-            $pvContent.html(rendered);
-            $pvPanel.show();
-        }
+        // Sync on submit
+        $ta.closest('form').on('submit', function() { savePages(); });
 
-        // Refresh chips whenever formFields changes
-        var origRenderAll = renderAll;
+        // Hook into renderAll
+        var _orig = renderAll;
         renderAll = function() {
-            origRenderAll();
+            _orig();
             refreshChips();
-            updateLivePreview();
         };
 
+        renderPages();
         refreshChips();
-        updateLivePreview();
-        console.log('✅ Preview Template Quill Editor ready!');
+        console.log('✅ Multi-Page Preview Editor ready! Pages:', pages.length);
+    }
+
+    // ==================== PREVIEW PAGES EDITOR ====================
+    function initPreviewPagesEditor() {
+        var $field = $('.field-preview_pages');
+        if (!$field.length) return;
+
+        var $ta = $field.find('textarea, input[type=text]');
+        if (!$ta.length) $ta = $field.find('[name=preview_pages]');
+        if (!$ta.length) return;
+
+        // pages data array
+        var pages = [];
+        try {
+            var v = $.trim($ta.val());
+            if (v && v !== '[]') pages = JSON.parse(v);
+            if (!Array.isArray(pages)) pages = [];
+        } catch(e) { pages = []; }
+
+        // quill instances per page
+        var quills = [];
+
+        function buildChips() {
+            var chips = [];
+            function collectFields(fields) {
+                (fields || []).forEach(function(f) {
+                    if (f.field_type === 'message') return;
+                    if (f.name) chips.push({name: f.name, label: f.label || f.name});
+                    (f.options || []).forEach(function(o) { collectFields(o.nested_fields || []); });
+                });
+            }
+            collectFields(formFields);
+            return chips;
+        }
+
+        function savePages() {
+            pages.forEach(function(p, i) {
+                if (quills[i]) p.template = quills[i].root.innerHTML;
+            });
+            $ta.val(JSON.stringify(pages));
+        }
+
+        function renderSamplePreview(html) {
+            var sampleData = {};
+            buildChips().forEach(function(c) {
+                sampleData[c.name] = '<span style="background:#dbeafe;color:#1e40af;padding:0 3px;border-radius:3px;font-weight:600">' + c.label + '</span>';
+            });
+            return html.replace(/\{\{\s*([\w_]+)\s*\}\}/g, function(m, k) { return sampleData[k] || m; });
+        }
+
+        // ---- Build outer wrapper ----
+        $ta.hide();
+        var $outer = $('<div id="pp-outer" style="max-width:750px"></div>');
+
+        // Header
+        var $hdr = $('<div style="background:linear-gradient(135deg,#7c3aed,#0ea5e9);border-radius:10px 10px 0 0;padding:12px 18px;display:flex;align-items:center;gap:10px"></div>');
+        $hdr.append('<i class="fas fa-copy" style="color:#fff;font-size:16px"></i>');
+        $hdr.append('<span style="color:#fff;font-weight:700;font-size:15px">Multi-Page Preview Editor</span>');
+        var $pageCount = $('<span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700"></span>');
+        $hdr.append($pageCount);
+        $outer.append($hdr);
+
+        // Placeholder chips bar
+        var $chipsBar = $('<div id="pp-chips" style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-top:none;padding:8px 12px;display:flex;flex-wrap:wrap;gap:5px;min-height:38px"></div>');
+        $outer.append($chipsBar);
+
+        // Pages container
+        var $pagesWrap = $('<div id="pp-pages" style="border:1.5px solid #ddd6fe;border-top:none"></div>');
+        $outer.append($pagesWrap);
+
+        // Add page button
+        var $addBtn = $('<button type="button" style="width:100%;padding:10px;border:2px dashed #a78bfa;border-top:none;border-radius:0 0 10px 10px;background:#faf5ff;color:#7c3aed;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px"><i class="fas fa-plus"></i> Add New Page</button>');
+        $addBtn.on('click', function() {
+            pages.push({title: 'Page ' + (pages.length + 1), template: ''});
+            renderPages();
+            savePages();
+        });
+        $outer.append($addBtn);
+
+        $ta.before($outer);
+
+        // ---- Render all pages ----
+        function renderPages() {
+            $pagesWrap.empty();
+            quills = [];
+            $pageCount.text(pages.length + ' page' + (pages.length !== 1 ? 's' : ''));
+
+            if (!pages.length) {
+                $pagesWrap.html('<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px"><i class="fas fa-file-alt" style="display:block;font-size:28px;margin-bottom:8px;opacity:.3"></i>No pages yet — click "Add New Page" below</div>');
+                return;
+            }
+
+            pages.forEach(function(page, idx) {
+                var $card = $('<div style="border-bottom:1.5px solid #ede9fe"></div>');
+
+                // Page header bar
+                var $bar = $('<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f5f3ff"></div>');
+                var $num = $('<span style="background:#7c3aed;color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;flex-shrink:0">Page ' + (idx+1) + '</span>');
+                var $titleInput = $('<input type="text" placeholder="Page title e.g. Affidavit Body" style="flex:1;padding:6px 10px;border:1.5px solid #ddd6fe;border-radius:6px;font-size:12px;font-family:inherit" value="' + escH(page.title || '') + '">');
+                $titleInput.on('input', function() {
+                    pages[idx].title = $(this).val();
+                    savePages();
+                });
+
+                // Move up/down
+                var $up = $('<button type="button" style="width:26px;height:26px;border:1.5px solid #ddd6fe;border-radius:5px;background:#fff;cursor:pointer;color:#7c3aed;font-size:10px;display:flex;align-items:center;justify-content:center"' + (idx===0?' disabled':'') + '><i class="fas fa-chevron-up"></i></button>');
+                var $dn = $('<button type="button" style="width:26px;height:26px;border:1.5px solid #ddd6fe;border-radius:5px;background:#fff;cursor:pointer;color:#7c3aed;font-size:10px;display:flex;align-items:center;justify-content:center"' + (idx===pages.length-1?' disabled':'') + '><i class="fas fa-chevron-down"></i></button>');
+                var $del = $('<button type="button" style="width:26px;height:26px;border:1.5px solid #fecaca;border-radius:5px;background:#fff;cursor:pointer;color:#ef4444;font-size:10px;display:flex;align-items:center;justify-content:center"><i class="fas fa-trash"></i></button>');
+
+                $up.on('click', function() {
+                    if (idx === 0) return;
+                    savePages();
+                    var t = pages[idx]; pages[idx] = pages[idx-1]; pages[idx-1] = t;
+                    renderPages(); savePages();
+                });
+                $dn.on('click', function() {
+                    if (idx === pages.length-1) return;
+                    savePages();
+                    var t = pages[idx]; pages[idx] = pages[idx+1]; pages[idx+1] = t;
+                    renderPages(); savePages();
+                });
+                $del.on('click', function() {
+                    if (!confirm('Delete "' + (page.title || 'Page '+(idx+1)) + '"?')) return;
+                    savePages();
+                    pages.splice(idx, 1);
+                    renderPages(); savePages();
+                });
+
+                $bar.append($num).append($titleInput).append($up).append($dn).append($del);
+                $card.append($bar);
+
+                // Quill editor
+                var edId = 'pp-quill-' + idx;
+                var $edWrap = $('<div style="border-top:1px solid #ede9fe"></div>');
+                var $edDiv = $('<div id="' + edId + '"></div>');
+                $edWrap.append($edDiv);
+                $card.append($edWrap);
+
+                // Live preview for this page
+                var $pvBox = $('<div style="margin:0;padding:10px 14px;background:#fffbeb;border-top:1px solid #fde68a;display:none"></div>');
+                $pvBox.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#92400e;margin-bottom:6px"><i class="fas fa-eye"></i> Live Preview</div>');
+                var $pvHtml = $('<div style="font-size:13px;color:#1f2937;line-height:1.7"></div>');
+                $pvBox.append($pvHtml);
+                $card.append($pvBox);
+
+                $pagesWrap.append($card);
+
+                // Init Quill for this page
+                var q = new Quill('#' + edId, {
+                    theme: 'snow',
+                    placeholder: 'Write page ' + (idx+1) + ' content here... Use {{placeholder}} chips above',
+                    modules: {
+                        toolbar: [
+                            [{'header': [1,2,3,false]}],
+                            ['bold','italic','underline','strike'],
+                            [{'color':[]},{'background':[]}],
+                            [{'list':'ordered'},{'list':'bullet'}],
+                            [{'align':[]}],
+                            ['link'],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                // Set initial content
+                if (page.template) q.root.innerHTML = page.template;
+
+                q.on('text-change', function() {
+                    pages[idx].template = q.root.innerHTML;
+                    $ta.val(JSON.stringify(pages));
+                    // Live preview
+                    var html = q.root.innerHTML;
+                    if (!html || html === '<p><br></p>') { $pvBox.hide(); return; }
+                    $pvHtml.html(renderSamplePreview(html));
+                    $pvBox.show();
+                });
+
+                // Show initial preview
+                if (page.template && page.template !== '<p><br></p>') {
+                    $pvHtml.html(renderSamplePreview(page.template));
+                    $pvBox.show();
+                }
+
+                quills.push(q);
+            });
+        }
+
+        // Refresh placeholder chips
+        function refreshChips() {
+            $chipsBar.empty();
+            var chips = buildChips();
+            if (!chips.length) {
+                $chipsBar.html('<span style="font-size:11px;color:#94a3b8">Add fields in Form Builder above to get placeholders</span>');
+                return;
+            }
+            chips.forEach(function(c) {
+                var $chip = $('<button type="button" style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;background:#7c3aed;color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:monospace"></button>');
+                $chip.text('{{' + c.name + '}}');
+                $chip.on('click', function() {
+                    // Insert into whichever quill is focused, else last one
+                    var target = null;
+                    quills.forEach(function(q) { if (q.hasFocus()) target = q; });
+                    if (!target && quills.length) target = quills[quills.length - 1];
+                    if (!target) return;
+                    var range = target.getSelection(true);
+                    target.insertText(range ? range.index : target.getLength(), '{{' + c.name + '}}', 'user');
+                });
+                $chipsBar.append($chip);
+            });
+        }
+
+        // Sync before form submit
+        $ta.closest('form').on('submit', function() { savePages(); });
+
+        // Hook into renderAll so chips refresh when form fields change
+        var _origRenderAll = renderAll;
+        renderAll = function() {
+            _origRenderAll();
+            refreshChips();
+        };
+
+        renderPages();
+        refreshChips();
+        console.log('✅ Preview Pages Editor ready! Pages:', pages.length);
     }
 
     $(document).ready(function() {
@@ -534,6 +843,7 @@
             initPanIndiaToggle();
             initFormBuilder();
             initPreviewTemplateEditor();
+            initPreviewPagesEditor();
             console.log('✅ All components initialized!');
         }, 300);
     });

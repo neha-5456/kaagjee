@@ -65,19 +65,30 @@ class CartItemSerializer(serializers.ModelSerializer):
     product_title = serializers.CharField(source='product.title', read_only=True)
     product_slug = serializers.CharField(source='product.slug', read_only=True)
     product_image = serializers.ImageField(source='product.featured_image', read_only=True)
-    full_price = serializers.DecimalField(source='product.full_price', max_digits=10, decimal_places=2, read_only=True)
+    base_price = serializers.DecimalField(source='product.full_price', max_digits=10, decimal_places=2, read_only=True)
     half_price = serializers.DecimalField(source='product.half_price', max_digits=10, decimal_places=2, read_only=True)
     allow_half_payment = serializers.BooleanField(source='product.allow_half_payment', read_only=True)
     submission_id = serializers.UUIDField(source='form_submission.submission_id', read_only=True)
     form_data = serializers.JSONField(source='form_submission.form_data', read_only=True)
-    
+    pricing_breakdown = serializers.SerializerMethodField()
+
     class Meta:
         model = CartItem
         fields = [
             'id', 'product_id', 'product_title', 'product_slug', 'product_image',
-            'full_price', 'half_price', 'allow_half_payment', 'unit_price',
-            'submission_id', 'form_data', 'added_at', 'half_payment'
+            'base_price', 'half_price', 'allow_half_payment', 'unit_price',
+            'pricing_breakdown', 'submission_id', 'form_data', 'added_at', 'half_payment'
         ]
+
+    def get_pricing_breakdown(self, obj):
+        from apps.products.utils import calculate_total_price
+        pricing = calculate_total_price(obj.product, obj.form_submission.form_data)
+        return {
+            'base_price': pricing['base_price'],
+            'options_price': pricing.get('options_price', 0),
+            'total_price': pricing['total_price'],
+            'breakdown': pricing['price_breakdown']
+        }
 
 
 class CartSerializer(serializers.ModelSerializer):
@@ -682,13 +693,18 @@ class CheckoutView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Check if any cart item has dropdown variation (has price_breakdown)
+        # Recalculate prices for all cart items and update unit_price
         has_variation = False
         for item in cart.items.all():
             pricing = calculate_total_price(item.product, item.form_submission.form_data)
-            print("Pricing for item:", item.product.title, pricing)
+            new_price = pricing['total_price']
+            # Update unit_price and price_at_submission with latest calculated price
+            item.unit_price = new_price
+            item.save(update_fields=['unit_price'])
+            item.form_submission.price_at_submission = new_price
+            item.form_submission.save(update_fields=['price_at_submission'])
             if pricing.get('price_breakdown'):
                 has_variation = True
-                break
         
         # If variation exists, force full payment only
         if has_variation:

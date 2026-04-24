@@ -143,10 +143,22 @@ class FormSchemaSerializer(serializers.ModelSerializer):
 
 
 class PreviewTemplateSerializer(serializers.ModelSerializer):
-    """Returns form schema + preview template together"""
+    """Returns form schema + preview template"""
+    rendered_pages = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
-        fields = ['id', 'title', 'slug', 'form_title', 'form_description', 'form_schema', 'preview_template', 'is_preview_enabled']
+        fields = ['id', 'title', 'slug', 'form_title', 'form_description', 'form_schema', 'preview_template', 'is_preview_enabled', 'rendered_pages']
+
+    def get_rendered_pages(self, obj):
+        """Parse pages from preview_template — pages separated by <!-- PAGE_BREAK -->"""
+        if not obj.preview_template:
+            return []
+        raw_pages = obj.preview_template.split('<!-- PAGE_BREAK -->')
+        return [
+            {'page_number': i + 1, 'template': p.strip()}
+            for i, p in enumerate(raw_pages) if p.strip()
+        ]
 
 
 # ========================
@@ -599,19 +611,21 @@ class PreviewTemplateView(generics.RetrieveAPIView):
         data = dict(serializer.data)
 
         if not instance.is_preview_enabled:
-            data['preview_template'] = None
-            data['rendered_preview'] = None
+            data['preview_template'] = ''
+            data['rendered_pages'] = []
             return Response({'success': True, 'data': data})
 
         if submission_id:
             data['form_data'] = submission.form_data
             data['submission_id'] = str(submission.submission_id)
-            if data.get('preview_template'):
-                data['rendered_preview'] = _render_template(
-                    data['preview_template'],
-                    submission.form_data,
-                    instance.form_schema
-                )
+            raw_pages = (instance.preview_template or '').split('<!-- PAGE_BREAK -->')
+            data['rendered_pages'] = [
+                {
+                    'page_number': i + 1,
+                    'rendered_html': _render_template(p.strip(), submission.form_data, instance.form_schema)
+                }
+                for i, p in enumerate(raw_pages) if p.strip()
+            ]
 
         return Response({'success': True, 'data': data})
 
@@ -633,15 +647,22 @@ class RenderPreviewView(APIView):
             return Response({'success': False, 'error': 'Product not found'}, status=404)
 
         if not product.preview_template:
-            return Response({'success': False, 'error': 'No preview template configured'}, status=400)
+            return Response({'success': False, 'error': 'No preview pages configured'}, status=400)
 
         form_data = request.data.get('form_data', {})
-        rendered = _render_template(product.preview_template, form_data)
-
+        raw_pages = product.preview_template.split('<!-- PAGE_BREAK -->')
+        rendered_pages = [
+            {
+                'page_number': i + 1,
+                'rendered_html': _render_template(p.strip(), form_data, product.form_schema)
+            }
+            for i, p in enumerate(raw_pages) if p.strip()
+        ]
         return Response({
             'success': True,
             'data': {
-                'rendered_html': rendered,
+                'rendered_pages': rendered_pages,
+                'total_pages': len(rendered_pages),
                 'product_title': product.title,
             }
         })

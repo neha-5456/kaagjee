@@ -88,8 +88,8 @@ class ProductAdmin(admin.ModelAdmin):
             'description': '<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:15px;border-radius:8px;margin-bottom:15px;"><strong>⭐ Visual Form Builder neeche hai!</strong></div>'
         }),
         ('📄 Preview Template', {
-            'fields': ('is_preview_enabled', 'preview_template',),
-            'description': '<div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);color:white;padding:15px;border-radius:8px;margin-bottom:15px;"><strong>📄 Preview Template:</strong> Use <code style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:4px;">{{field_name}}</code> placeholders. Available placeholders will be shown automatically from Form Builder fields.</div>'
+            'fields': ('is_preview_enabled', 'preview_template'),
+            'description': '<div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);color:white;padding:15px;border-radius:8px;margin-bottom:15px;"><strong>📄 Multi-Page Preview Editor:</strong> Har page ka alag title aur content. Use <code style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:4px;">{{field_name}}</code> placeholders.</div>'
         }),
         ('⚙️ Status', {
             'fields': ('status',),
