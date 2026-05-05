@@ -18,10 +18,10 @@ class VerifyOTPSerializer(serializers.Serializer):
 
 class RegisterRequestSerializer(serializers.Serializer):
     """Serializer for registration request - sends OTP"""
-    first_name = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100)
-    email = serializers.EmailField()
     phone_number = serializers.CharField(max_length=15)
+    first_name = serializers.CharField(max_length=100, required=False, default='')
+    last_name = serializers.CharField(max_length=100, required=False, default='')
+    email = serializers.EmailField(required=False, allow_null=True, default=None)
 
     def validate_phone_number(self, value):
         if User.objects.filter(phone_number=value).exists():
@@ -38,9 +38,9 @@ class RegisterVerifySerializer(serializers.Serializer):
     """Serializer for OTP verification during registration"""
     phone_number = serializers.CharField(max_length=15)
     otp_code = serializers.CharField(max_length=6)
-    first_name = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100)
-    email = serializers.EmailField()
+    first_name = serializers.CharField(max_length=100, required=False, default='')
+    last_name = serializers.CharField(max_length=100, required=False, default='')
+    email = serializers.EmailField(required=False, allow_null=True, default=None)
 
     def validate(self, data):
         phone = data.get('phone_number')

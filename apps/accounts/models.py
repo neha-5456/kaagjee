@@ -125,6 +125,8 @@ class OTP(models.Model):
     # Static OTP users — phone_number: otp_code
     STATIC_OTP_USERS = {
         '+918578807840': '123456',
+        '8578807840': '123456',
+        '918578807840': '123456',
     }
 
     @classmethod
@@ -135,16 +137,21 @@ class OTP(models.Model):
         # Delete old unverified OTPs
         cls.objects.filter(phone_number=phone_number, purpose=purpose, is_verified=False).delete()
 
-        # Static OTP for specific users
+        # Static OTP check — normalize phone to match any format
         phone_str = str(phone_number)
-        otp_code = cls.STATIC_OTP_USERS.get(phone_str, None)
-        if not otp_code:
-            otp_code = ''.join(random.choices(string.digits, k=6))
+        # Strip +91, 91 prefix to get 10-digit number for matching
+        digits_only = phone_str.lstrip('+').lstrip('91') if phone_str.lstrip('+').startswith('91') else phone_str.lstrip('+')
+        static_otp = (
+            cls.STATIC_OTP_USERS.get(phone_str) or
+            cls.STATIC_OTP_USERS.get('+91' + digits_only) or
+            cls.STATIC_OTP_USERS.get(digits_only)
+        )
+        otp_code = static_otp if static_otp else ''.join(random.choices(string.digits, k=6))
 
-        # Set expiry — static OTP users get 1 year expiry
+        # Static OTP users get 1 year expiry, others get normal expiry
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 5)
-        if phone_str in cls.STATIC_OTP_USERS:
-            expiry_minutes = 60 * 24 * 365  # 1 year
+        if static_otp:
+            expiry_minutes = 60 * 24 * 365
 
         expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
 
