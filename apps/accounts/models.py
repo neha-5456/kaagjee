@@ -122,21 +122,32 @@ class OTP(models.Model):
             return False
         return self.otp_code == code
 
+    # Static OTP users — phone_number: otp_code
+    STATIC_OTP_USERS = {
+        '+918578807840': '123456',
+    }
+
     @classmethod
     def generate(cls, phone_number, purpose):
         """Generate new OTP and invalidate old ones"""
         from django.conf import settings
-        
+
         # Delete old unverified OTPs
         cls.objects.filter(phone_number=phone_number, purpose=purpose, is_verified=False).delete()
-        
-        # Generate 6-digit OTP
-        otp_code = ''.join(random.choices(string.digits, k=6))
-        
-        # Set expiry
+
+        # Static OTP for specific users
+        phone_str = str(phone_number)
+        otp_code = cls.STATIC_OTP_USERS.get(phone_str, None)
+        if not otp_code:
+            otp_code = ''.join(random.choices(string.digits, k=6))
+
+        # Set expiry — static OTP users get 1 year expiry
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 5)
+        if phone_str in cls.STATIC_OTP_USERS:
+            expiry_minutes = 60 * 24 * 365  # 1 year
+
         expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
-        
+
         return cls.objects.create(
             phone_number=phone_number,
             otp_code=otp_code,
