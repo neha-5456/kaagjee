@@ -1534,7 +1534,33 @@ class GeneratePDFView(APIView):
                 val = ', '.join(str(v) for v in val)
             return str(val) if val else ''
 
-        body_html = re.sub(r'\{\{\s*([\w_]+)\s*\}\}', replacer, product.preview_template)
+        # Parse pages — supports both JSON array format and PAGE_BREAK text format
+        import json as _json
+        template = product.preview_template
+        pages = []
+        try:
+            parsed = _json.loads(template)
+            if isinstance(parsed, list):
+                # JSON array: [{"title": "Page 1", "template": "<html>..."}, ...]
+                pages = [p.get('template', '') for p in parsed if p.get('template', '').strip()]
+        except (ValueError, TypeError):
+            pass
+
+        if not pages:
+            # Fallback: split by PAGE_BREAK marker
+            pages = [p.strip() for p in template.split('<!-- PAGE_BREAK -->') if p.strip()]
+
+        if not pages:
+            return Response({'success': False, 'error': 'No pages found in template'}, status=400)
+
+        def render_page(html):
+            return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, html)
+
+        pages_html = ''
+        for i, page in enumerate(pages):
+            is_last = (i == len(pages) - 1)
+            style = '' if is_last else 'page-break-after: always;'
+            pages_html += f'<div style="{style}">{render_page(page)}</div>'
 
         full_html = f"""
         <!DOCTYPE html>
@@ -1542,23 +1568,25 @@ class GeneratePDFView(APIView):
         <head>
             <meta charset="utf-8">
             <style>
-                body {{ font-family: Arial, sans-serif; font-size: 13px; padding: 40px; color: #1f2937; }}
+                @page {{ margin: 20mm 15mm; }}
+                body {{ font-family: Arial, sans-serif; font-size: 13px; color: #1f2937; line-height: 1.6; }}
                 h1, h2, h3 {{ color: #1e40af; }}
+                p {{ margin: 6px 0; }}
+                strong {{ font-weight: 700; }}
                 table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
                 td, th {{ border: 1px solid #e5e7eb; padding: 8px 12px; }}
                 th {{ background: #f1f5f9; font-weight: 600; }}
             </style>
         </head>
         <body>
-            <h2>{product.title}</h2>
-            {body_html}
+            {pages_html}
         </body>
         </html>
         """
 
         pdf_bytes = HTML(string=full_html).write_pdf()
-
-        filename = f"{product.slug}-preview.pdf"
+        filename = f"{product.slug}-performa.pdf"
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        response['X-Total-Pages'] = str(len(pages))
         return response
