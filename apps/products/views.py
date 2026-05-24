@@ -252,9 +252,8 @@ class ProductListView(generics.ListAPIView):
         state_id = params.get('state_id')
         state_code = params.get('state_code')
         state_slug = params.get('state_slug')
-        
+
         if state_id:
-            # Products that are Pan India OR available in this state
             qs = qs.filter(
                 Q(is_pan_india=True) | Q(available_states__id=state_id)
             )
@@ -266,21 +265,25 @@ class ProductListView(generics.ListAPIView):
             qs = qs.filter(
                 Q(is_pan_india=True) | Q(available_states__slug=state_slug)
             )
-        
+
         # ========================================
         # CITY FILTERING
         # ========================================
         city_id = params.get('city_id')
         city_slug = params.get('city_slug')
-        
+
         if city_id:
-            # Products that are Pan India OR available in this city
+            # Pan India  OR  city explicitly listed  OR  state matched but no cities specified (state-level availability)
             qs = qs.filter(
-                Q(is_pan_india=True) | Q(available_cities__id=city_id)
+                Q(is_pan_india=True)
+                | Q(available_cities__id=city_id)
+                | Q(available_cities__isnull=True)
             )
         elif city_slug:
             qs = qs.filter(
-                Q(is_pan_india=True) | Q(available_cities__slug=city_slug)
+                Q(is_pan_india=True)
+                | Q(available_cities__slug=city_slug)
+                | Q(available_cities__isnull=True)
             )
         
         # ========================================
@@ -350,10 +353,14 @@ class FeaturedProductsView(generics.ListAPIView):
         
         if state_id:
             qs = qs.filter(Q(is_pan_india=True) | Q(available_states__id=state_id)).distinct()
-        
+
         if city_id:
-            qs = qs.filter(Q(is_pan_india=True) | Q(available_cities__id=city_id)).distinct()
-        
+            qs = qs.filter(
+                Q(is_pan_india=True)
+                | Q(available_cities__id=city_id)
+                | Q(available_cities__isnull=True)
+            ).distinct()
+
         return qs
 
     def list(self, request, *args, **kwargs):
@@ -383,10 +390,14 @@ class PopularProductsView(generics.ListAPIView):
         
         if state_id:
             qs = qs.filter(Q(is_pan_india=True) | Q(available_states__id=state_id)).distinct()
-        
+
         if city_id:
-            qs = qs.filter(Q(is_pan_india=True) | Q(available_cities__id=city_id)).distinct()
-        
+            qs = qs.filter(
+                Q(is_pan_india=True)
+                | Q(available_cities__id=city_id)
+                | Q(available_cities__isnull=True)
+            ).distinct()
+
         return qs
 
     def list(self, request, *args, **kwargs):
@@ -466,10 +477,14 @@ class ProductsByCategoryView(generics.ListAPIView):
         
         # City filter
         city_id = params.get('city_id')
-        
+
         if city_id:
-            qs = qs.filter(Q(is_pan_india=True) | Q(available_cities__id=city_id))
-        
+            qs = qs.filter(
+                Q(is_pan_india=True)
+                | Q(available_cities__id=city_id)
+                | Q(available_cities__isnull=True)
+            )
+
         return qs.distinct()
 
     def list(self, request, *args, **kwargs):
@@ -516,7 +531,11 @@ class ProductsByLocationView(generics.ListAPIView):
         # City filter
         city_id = params.get('city_id')
         if city_id:
-            qs = qs.filter(Q(is_pan_india=True) | Q(available_cities__id=city_id))
+            qs = qs.filter(
+                Q(is_pan_india=True)
+                | Q(available_cities__id=city_id)
+                | Q(available_cities__isnull=True)
+            )
         
         # Category filter
         category_id = params.get('category')

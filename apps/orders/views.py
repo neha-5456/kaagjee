@@ -1563,7 +1563,7 @@ class GeneratePDFView(APIView):
         for i, page in enumerate(pages):
             is_last = (i == len(pages) - 1)
             style = '' if is_last else 'page-break-after: always;'
-            pages_html += f'<div style="{style}">{render_page(page)}</div>'
+            pages_html += f'<div class="ql-page" style="{style}">{render_page(page)}</div>'
 
         full_html = f"""
         <!DOCTYPE html>
@@ -1572,27 +1572,58 @@ class GeneratePDFView(APIView):
             <meta charset="utf-8">
             <style>
                 @page {{ margin: 20mm 15mm; }}
-                body {{ font-family: Arial, sans-serif; font-size: 13px; color: #1f2937; line-height: 1.6; }}
-                h1, h2, h3 {{ color: #1e40af; }}
-                p {{ margin: 6px 0; }}
-                strong {{ font-weight: 700; }}
-                em {{ font-style: italic; }}
-                u {{ text-decoration: underline; }}
-                s {{ text-decoration: line-through; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-                td, th {{ border: 1px solid #e5e7eb; padding: 8px 12px; }}
-                th {{ background: #f1f5f9; font-weight: 600; }}
-                /* Quill alignment classes */
-                .ql-align-center {{ text-align: center; }}
-                .ql-align-right  {{ text-align: right; }}
+                * {{ box-sizing: border-box; }}
+                body {{
+                    font-family: Arial, sans-serif;
+                    font-size: 13px;
+                    color: #1f2937;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 0;
+                }}
+
+                /* ── Headings ── */
+                h1 {{ font-size: 20px; font-weight: 700; margin: 10px 0 6px; }}
+                h2 {{ font-size: 17px; font-weight: 700; margin: 8px 0 5px; }}
+                h3 {{ font-size: 15px; font-weight: 700; margin: 6px 0 4px; }}
+
+                /* ── Paragraphs — Quill wraps every line in <p> ── */
+                p {{ margin: 0; padding: 0; min-height: 1.6em; }}
+
+                /* ── Inline formatting ── */
+                strong, b {{ font-weight: 700; }}
+                em, i     {{ font-style: italic; }}
+                u         {{ text-decoration: underline; }}
+                s         {{ text-decoration: line-through; }}
+                a         {{ color: #2563eb; text-decoration: underline; }}
+                span      {{ /* inline styles from Quill (color/background-color) pass through */ }}
+
+                /* ── Quill alignment classes ── */
+                .ql-align-center  {{ text-align: center; }}
+                .ql-align-right   {{ text-align: right; }}
                 .ql-align-justify {{ text-align: justify; }}
-                /* Quill indent */
+
+                /* ── Quill indent (on both <p> and <li>) ── */
                 .ql-indent-1 {{ padding-left: 3em; }}
                 .ql-indent-2 {{ padding-left: 6em; }}
                 .ql-indent-3 {{ padding-left: 9em; }}
-                /* Quill lists */
-                ol, ul {{ padding-left: 1.5em; margin: 6px 0; }}
-                li {{ margin: 3px 0; }}
+                .ql-indent-4 {{ padding-left: 12em; }}
+                .ql-indent-5 {{ padding-left: 15em; }}
+
+                /* ── Lists ── */
+                ol, ul {{ padding-left: 1.5em; margin: 4px 0; }}
+                li {{ margin: 2px 0; }}
+                li.ql-indent-1 {{ padding-left: 3em; }}
+                li.ql-indent-2 {{ padding-left: 6em; }}
+
+                /* ── Table ── */
+                table {{ width: 100%; border-collapse: collapse; margin: 8px 0; }}
+                td, th {{ border: 1px solid #d1d5db; padding: 6px 10px; }}
+                th {{ background: #f1f5f9; font-weight: 600; }}
+
+                /* ── Page break ── */
+                .ql-page {{ page-break-after: always; }}
+                .ql-page:last-child {{ page-break-after: avoid; }}
             </style>
         </head>
         <body>

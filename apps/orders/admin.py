@@ -142,11 +142,52 @@ class FormSubmissionAdmin(admin.ModelAdmin):
         <!DOCTYPE html><html><head><meta charset="utf-8">
         <title>Performa - {obj.submission_id}</title>
         <style>
-            @page {{ margin: 20mm 15mm; }}
-            body {{ font-family: Georgia, serif; font-size: 13px; color: #1f2937; line-height: 1.8; }}
-            strong {{ color: #1e40af; }}
-            p {{ margin: 6px 0; }}
-            @media print {{ .no-print {{ display: none !important; }} }}
+            @page {{
+                margin: 20mm 15mm;
+                @top-left   {{ content: ''; }}
+                @top-center {{ content: ''; }}
+                @top-right  {{ content: ''; }}
+                @bottom-left   {{ content: ''; }}
+                @bottom-center {{ content: ''; }}
+                @bottom-right  {{ content: ''; }}
+            }}
+            * {{ box-sizing: border-box; }}
+            body {{
+                font-family: Arial, sans-serif;
+                font-size: 13px;
+                color: #1f2937;
+                line-height: 1.6;
+                margin: 0;
+                padding: 0;
+            }}
+            h1 {{ font-size: 20px; font-weight: 700; margin: 10px 0 6px; }}
+            h2 {{ font-size: 17px; font-weight: 700; margin: 8px 0 5px; }}
+            h3 {{ font-size: 15px; font-weight: 700; margin: 6px 0 4px; }}
+            p  {{ margin: 0; padding: 0; min-height: 1.6em; }}
+            strong, b {{ font-weight: 700; }}
+            em, i     {{ font-style: italic; }}
+            u         {{ text-decoration: underline; }}
+            s         {{ text-decoration: line-through; }}
+            a         {{ color: #2563eb; text-decoration: underline; }}
+            .ql-align-center  {{ text-align: center; }}
+            .ql-align-right   {{ text-align: right; }}
+            .ql-align-justify {{ text-align: justify; }}
+            .ql-indent-1 {{ padding-left: 3em; }}
+            .ql-indent-2 {{ padding-left: 6em; }}
+            .ql-indent-3 {{ padding-left: 9em; }}
+            .ql-indent-4 {{ padding-left: 12em; }}
+            .ql-indent-5 {{ padding-left: 15em; }}
+            ol, ul {{ padding-left: 1.5em; margin: 4px 0; }}
+            li {{ margin: 2px 0; }}
+            li.ql-indent-1 {{ padding-left: 3em; }}
+            li.ql-indent-2 {{ padding-left: 6em; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 8px 0; }}
+            td, th {{ border: 1px solid #d1d5db; padding: 6px 10px; }}
+            th {{ background: #f1f5f9; font-weight: 600; }}
+            @media print {{
+                .no-print {{ display: none !important; }}
+                html {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+            }}
         </style></head><body>
         <div class="no-print" style="background:#4f46e5;color:#fff;padding:10px 20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif">
             <span style="font-weight:700">📄 {product.title} &nbsp;|&nbsp; {len(pages)} page(s) &nbsp;|&nbsp; {obj.user}</span>
@@ -356,13 +397,53 @@ class OrderAdmin(admin.ModelAdmin):
         <!DOCTYPE html><html><head><meta charset="utf-8">
         <title>Performa - {order.order_id}</title>
         <style>
-            @page {{ margin: 20mm 15mm; }}
-            body {{ font-family: Georgia, serif; font-size: 13px; color: #1f2937; line-height: 1.8; }}
-            strong {{ color: #1e40af; }}
-            p {{ margin: 6px 0; }}
+            @page {{
+                margin: 20mm 15mm;
+                /* Remove browser-added URL and date/time from print header/footer */
+                @top-left   {{ content: ''; }}
+                @top-center {{ content: ''; }}
+                @top-right  {{ content: ''; }}
+                @bottom-left   {{ content: ''; }}
+                @bottom-center {{ content: ''; }}
+                @bottom-right  {{ content: ''; }}
+            }}
+            * {{ box-sizing: border-box; }}
+            body {{
+                font-family: Arial, sans-serif;
+                font-size: 13px;
+                color: #1f2937;
+                line-height: 1.6;
+                margin: 0;
+                padding: 0;
+            }}
+            h1 {{ font-size: 20px; font-weight: 700; margin: 10px 0 6px; }}
+            h2 {{ font-size: 17px; font-weight: 700; margin: 8px 0 5px; }}
+            h3 {{ font-size: 15px; font-weight: 700; margin: 6px 0 4px; }}
+            p  {{ margin: 0; padding: 0; min-height: 1.6em; }}
+            strong, b {{ font-weight: 700; }}
+            em, i     {{ font-style: italic; }}
+            u         {{ text-decoration: underline; }}
+            s         {{ text-decoration: line-through; }}
+            a         {{ color: #2563eb; text-decoration: underline; }}
+            .ql-align-center  {{ text-align: center; }}
+            .ql-align-right   {{ text-align: right; }}
+            .ql-align-justify {{ text-align: justify; }}
+            .ql-indent-1 {{ padding-left: 3em; }}
+            .ql-indent-2 {{ padding-left: 6em; }}
+            .ql-indent-3 {{ padding-left: 9em; }}
+            .ql-indent-4 {{ padding-left: 12em; }}
+            .ql-indent-5 {{ padding-left: 15em; }}
+            ol, ul {{ padding-left: 1.5em; margin: 4px 0; }}
+            li {{ margin: 2px 0; }}
+            li.ql-indent-1 {{ padding-left: 3em; }}
+            li.ql-indent-2 {{ padding-left: 6em; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 8px 0; }}
+            td, th {{ border: 1px solid #d1d5db; padding: 6px 10px; }}
+            th {{ background: #f1f5f9; font-weight: 600; }}
             @media print {{
                 .no-print {{ display: none !important; }}
-                body {{ padding: 0; }}
+                /* Force browser to hide its own header/footer */
+                html {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
             }}
         </style></head><body>
         <div class="no-print" style="background:#1e40af;color:#fff;padding:10px 20px;margin-bottom:30px;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif">
