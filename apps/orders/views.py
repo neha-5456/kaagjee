@@ -119,19 +119,22 @@ class OrderItemSerializer(serializers.ModelSerializer):
         if hasattr(product, 'is_preview_enabled') and not product.is_preview_enabled:
             return None
         form_data   = obj.form_data or {}
-        form_schema = product.form_schema or []
         lookup = dict(form_data)
-        for field in form_schema:
-            name         = field.get('name', '')
-            label        = field.get('label', '')
-            performa_key = field.get('performa_key', '').strip()
-            value        = form_data.get(name, '') or form_data.get(performa_key, '')
-            if name:         lookup[name]       = value
-            if performa_key: lookup[performa_key] = value
-            if label:
-                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
-                lookup[normalized] = value
-                lookup[label]      = value
+        def collect(fields):
+            for field in (fields or []):
+                name         = field.get('name', '')
+                label        = field.get('label', '')
+                performa_key = field.get('performa_key', '').strip()
+                value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
+                if name:         lookup[name]         = value
+                if performa_key: lookup[performa_key] = value
+                if label:
+                    normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                    lookup[normalized] = value
+                    lookup[label]      = value
+                for opt in (field.get('options') or []):
+                    collect(opt.get('nested_fields') or [])
+        collect(product.form_schema or [])
         def replacer(match):
             key = match.group(1).strip()
             val = lookup.get(key, '')
@@ -1573,9 +1576,23 @@ class GeneratePDFView(APIView):
                 h1, h2, h3 {{ color: #1e40af; }}
                 p {{ margin: 6px 0; }}
                 strong {{ font-weight: 700; }}
+                em {{ font-style: italic; }}
+                u {{ text-decoration: underline; }}
+                s {{ text-decoration: line-through; }}
                 table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
                 td, th {{ border: 1px solid #e5e7eb; padding: 8px 12px; }}
                 th {{ background: #f1f5f9; font-weight: 600; }}
+                /* Quill alignment classes */
+                .ql-align-center {{ text-align: center; }}
+                .ql-align-right  {{ text-align: right; }}
+                .ql-align-justify {{ text-align: justify; }}
+                /* Quill indent */
+                .ql-indent-1 {{ padding-left: 3em; }}
+                .ql-indent-2 {{ padding-left: 6em; }}
+                .ql-indent-3 {{ padding-left: 9em; }}
+                /* Quill lists */
+                ol, ul {{ padding-left: 1.5em; margin: 6px 0; }}
+                li {{ margin: 3px 0; }}
             </style>
         </head>
         <body>

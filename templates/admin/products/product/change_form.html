@@ -525,12 +525,41 @@
                 $edWrap.append($('<div id="' + edId + '"></div>'));
                 $card.append($edWrap);
 
-                // Live preview
-                var $pvBox = $('<div style="padding:10px 14px;background:#fffbeb;border-top:1px solid #fde68a;display:none"></div>');
-                $pvBox.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#92400e;margin-bottom:6px"><i class="fas fa-eye"></i> Live Preview</div>');
-                var $pvHtml = $('<div style="font-size:13px;color:#1f2937;line-height:1.7"></div>');
-                $pvBox.append($pvHtml);
+                // Live preview — A4 page simulation
+                var $pvBox = $('<div style="padding:10px 14px;background:#f8fafc;border-top:2px solid #e2e8f0;display:none"></div>');
+                var $pvHeader = $('<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"></div>');
+                $pvHeader.append('<span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b"><i class="fas fa-eye"></i> A4 Live Preview</span>');
+                var $pvOverflowWarn = $('<span style="display:none;font-size:11px;font-weight:700;color:#dc2626;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:6px;padding:3px 10px"><i class="fas fa-exclamation-triangle"></i> Content exceeds 1 page! Reduce text or split into multiple pages.</span>');
+                $pvHeader.append($pvOverflowWarn);
+                $pvBox.append($pvHeader);
+                // A4 wrapper: 210mm wide, 297mm tall at 96dpi ≈ 794×1123px; use scaled-down version
+                var $pvA4 = $('<div style="width:794px;min-height:1123px;max-height:1123px;background:#fff;border:1px solid #d1d5db;box-shadow:0 2px 12px rgba(0,0,0,.12);padding:60px 70px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:13px;color:#1f2937;line-height:1.6;overflow:hidden;position:relative;transform-origin:top left"></div>');
+                var $pvHtml = $('<div class="ql-editor" style="padding:0;min-height:unset"></div>');
+                $pvA4.append($pvHtml);
+                // Scale A4 to fit inside the editor panel (~750px wide)
+                var $pvScaleWrap = $('<div style="overflow:hidden;width:100%"></div>');
+                $pvScaleWrap.append($pvA4);
+                $pvBox.append($pvScaleWrap);
                 $card.append($pvBox);
+
+                function updateA4Scale() {
+                    var panelW = $pvScaleWrap.width() || 700;
+                    var scale = Math.min(1, panelW / 794);
+                    $pvA4.css('transform', 'scale(' + scale + ')');
+                    $pvScaleWrap.css('height', Math.round(1123 * scale) + 'px');
+                }
+
+                function checkOverflow() {
+                    var sh = $pvHtml[0].scrollHeight;
+                    var ch = 1123 - 120; // 1123px page minus 60px top+bottom padding
+                    if (sh > ch) {
+                        $pvOverflowWarn.show();
+                        $pvA4.css('border', '2px solid #ef4444');
+                    } else {
+                        $pvOverflowWarn.hide();
+                        $pvA4.css('border', '1px solid #d1d5db');
+                    }
+                }
 
                 $pagesWrap.append($card);
 
@@ -560,11 +589,14 @@
                     if (!html || html === '<p><br></p>') { $pvBox.hide(); return; }
                     $pvHtml.html(renderSample(html));
                     $pvBox.show();
+                    updateA4Scale();
+                    setTimeout(checkOverflow, 50);
                 });
 
                 if (page.template && page.template !== '<p><br></p>') {
                     $pvHtml.html(renderSample(page.template));
                     $pvBox.show();
+                    setTimeout(function() { updateA4Scale(); checkOverflow(); }, 100);
                 }
 
                 quills.push(q);
@@ -745,12 +777,39 @@
                 $edWrap.append($edDiv);
                 $card.append($edWrap);
 
-                // Live preview for this page
-                var $pvBox = $('<div style="margin:0;padding:10px 14px;background:#fffbeb;border-top:1px solid #fde68a;display:none"></div>');
-                $pvBox.append('<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#92400e;margin-bottom:6px"><i class="fas fa-eye"></i> Live Preview</div>');
-                var $pvHtml = $('<div style="font-size:13px;color:#1f2937;line-height:1.7"></div>');
-                $pvBox.append($pvHtml);
+                // Live preview — A4 page simulation
+                var $pvBox = $('<div style="padding:10px 14px;background:#f8fafc;border-top:2px solid #e2e8f0;display:none"></div>');
+                var $pvHeader2 = $('<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"></div>');
+                $pvHeader2.append('<span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b"><i class="fas fa-eye"></i> A4 Live Preview</span>');
+                var $pvOverflowWarn2 = $('<span style="display:none;font-size:11px;font-weight:700;color:#dc2626;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:6px;padding:3px 10px"><i class="fas fa-exclamation-triangle"></i> Content exceeds 1 page! Reduce text or split into multiple pages.</span>');
+                $pvHeader2.append($pvOverflowWarn2);
+                $pvBox.append($pvHeader2);
+                var $pvA4 = $('<div style="width:794px;min-height:1123px;max-height:1123px;background:#fff;border:1px solid #d1d5db;box-shadow:0 2px 12px rgba(0,0,0,.12);padding:60px 70px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:13px;color:#1f2937;line-height:1.6;overflow:hidden;position:relative;transform-origin:top left"></div>');
+                var $pvHtml = $('<div class="ql-editor" style="padding:0;min-height:unset"></div>');
+                $pvA4.append($pvHtml);
+                var $pvScaleWrap2 = $('<div style="overflow:hidden;width:100%"></div>');
+                $pvScaleWrap2.append($pvA4);
+                $pvBox.append($pvScaleWrap2);
                 $card.append($pvBox);
+
+                function updateA4Scale2() {
+                    var panelW = $pvScaleWrap2.width() || 700;
+                    var scale = Math.min(1, panelW / 794);
+                    $pvA4.css('transform', 'scale(' + scale + ')');
+                    $pvScaleWrap2.css('height', Math.round(1123 * scale) + 'px');
+                }
+
+                function checkOverflow2() {
+                    var sh = $pvHtml[0].scrollHeight;
+                    var ch = 1123 - 120;
+                    if (sh > ch) {
+                        $pvOverflowWarn2.show();
+                        $pvA4.css('border', '2px solid #ef4444');
+                    } else {
+                        $pvOverflowWarn2.hide();
+                        $pvA4.css('border', '1px solid #d1d5db');
+                    }
+                }
 
                 $pagesWrap.append($card);
 
@@ -782,12 +841,15 @@
                     if (!html || html === '<p><br></p>') { $pvBox.hide(); return; }
                     $pvHtml.html(renderSamplePreview(html));
                     $pvBox.show();
+                    updateA4Scale2();
+                    setTimeout(checkOverflow2, 50);
                 });
 
                 // Show initial preview
                 if (page.template && page.template !== '<p><br></p>') {
                     $pvHtml.html(renderSamplePreview(page.template));
                     $pvBox.show();
+                    setTimeout(function() { updateA4Scale2(); checkOverflow2(); }, 100);
                 }
 
                 quills.push(q);
@@ -1713,10 +1775,11 @@
 
         // Basic grid
         var $g = $('<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px"></div>');
-        var lu='nfl-'+nf.id, pu='nfph-'+nf.id, hu='nfht-'+nf.id;
+        var lu='nfl-'+nf.id, pu='nfph-'+nf.id, hu='nfht-'+nf.id, pku='nfpk-'+nf.id;
         $g.append('<div class="fb-sg"><label>Label</label><input class="'+lu+'" value="'+escH(nf.label)+'" placeholder="Field label"></div>');
+        $g.append('<div class="fb-sg"><label>Performa Key <span style="color:#6366f1;font-size:9px;font-weight:700">{{placeholder}}</span></label><input class="'+pku+'" value="'+escH(nf.performa_key||nf.name||'')+'" placeholder="e.g. reg_number" style="font-family:monospace;font-size:11px!important;color:#4f46e5!important"></div>');
         $g.append('<div class="fb-sg"><label>Placeholder</label><input class="'+pu+'" value="'+escH(nf.placeholder||'')+'" placeholder="Hint text"></div>');
-        $g.append('<div class="fb-sg" style="grid-column:span 2"><label>Help Text</label><input class="'+hu+'" value="'+escH(nf.help_text||'')+'" placeholder="Shown below field"></div>');
+        $g.append('<div class="fb-sg"><label>Help Text</label><input class="'+hu+'" value="'+escH(nf.help_text||'')+'" placeholder="Shown below field"></div>');
         $w.append($g);
 
         // Toggles
@@ -1749,8 +1812,19 @@
         $w.find('.'+lu).on('input', function() {
             nf.label=$(this).val();
             nf.name=nf.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'field';
+            // Auto-set performa_key only if not manually set
+            if (!nf._performa_key_manual) {
+                nf.performa_key = nf.name;
+                $w.find('.'+pku).val(nf.performa_key);
+            }
             // Update card title in-place without re-render
             $w.closest('[style*="overflow:hidden"]').find('.nfc-lbl-'+nf.id).first().text(nf.label||'(unlabeled)');
+            saveSchema();
+        });
+        $w.find('.'+pku).on('input', function() {
+            nf.performa_key = $(this).val().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+            $(this).val(nf.performa_key);
+            nf._performa_key_manual = true;
             saveSchema();
         });
         $w.find('.'+pu).on('input', function() { nf.placeholder=$(this).val(); saveSchema(); });

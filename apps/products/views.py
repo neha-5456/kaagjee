@@ -692,21 +692,28 @@ def _render_template(template, form_data, form_schema=None):
     # Build all possible key->value mappings
     lookup = dict(form_data)  # direct keys
 
-    if form_schema:
-        for field in form_schema:
+    def collect_field_lookups(fields):
+        for field in (fields or []):
             name         = field.get('name', '')
             label        = field.get('label', '')
-            performa_key = field.get('performa_key', '')
-            value        = form_data.get(name, '')
+            performa_key = field.get('performa_key', '').strip()
+            value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
 
             if performa_key:
-                lookup[performa_key] = value          # {{full_name_of_adhar_card}}
+                lookup[performa_key] = value
             if label:
                 normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
                 lookup[normalized] = value
                 lookup[label] = value
             if name:
                 lookup[name] = value
+
+            # Recurse into nested_fields inside options
+            for opt in (field.get('options') or []):
+                collect_field_lookups(opt.get('nested_fields') or [])
+
+    if form_schema:
+        collect_field_lookups(form_schema)
 
     def replacer(match):
         key = match.group(1).strip()
