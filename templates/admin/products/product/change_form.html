@@ -1036,13 +1036,19 @@
         function selectAll($select) {
             $select.find('option').prop('selected', true);
             var id = $select.attr('id') === 'id_available_states' ? 'stateDropdown' : 'cityDropdown';
-            $('#' + id + ' .custom-dropdown-content > div').addClass('selected');
+            var $wrapper = $('#' + id);
+            $wrapper.find('.custom-dropdown-content > div').addClass('selected');
+            var fn = $wrapper.data('updateBtn');
+            if (fn) fn();
         }
 
         function deselectAll($select) {
             $select.find('option').prop('selected', false);
             var id = $select.attr('id') === 'id_available_states' ? 'stateDropdown' : 'cityDropdown';
-            $('#' + id + ' .custom-dropdown-content > div').removeClass('selected');
+            var $wrapper = $('#' + id);
+            $wrapper.find('.custom-dropdown-content > div').removeClass('selected');
+            var fn = $wrapper.data('updateBtn');
+            if (fn) fn();
         }
 
         // Only run selectAll on page load if pan india is checked AND nothing is already selected
@@ -1051,8 +1057,24 @@
             if ($checkbox.is(':checked')) {
                 selectAll($states);
                 selectAll($cities);
+                // Show warning if pan india is checked
+                showPanIndiaWarning(true);
+            } else {
+                showPanIndiaWarning(false);
             }
             // If unchecked: do NOT deselect — preserve whatever Django rendered as selected
+        }
+
+        function showPanIndiaWarning(show) {
+            $('#pan-india-warning').remove();
+            if (show) {
+                $checkbox.closest('.form-row').after(
+                    '<div id="pan-india-warning" style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 14px;margin:6px 0;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px">'
+                    + '<i class="fas fa-exclamation-triangle"></i>'
+                    + '<span><strong>Pan India is ON</strong> — product will show for ALL states &amp; cities. Uncheck to restrict to specific locations.</span>'
+                    + '</div>'
+                );
+            }
         }
 
         // On manual change: apply full toggle
@@ -1060,9 +1082,11 @@
             if ($checkbox.is(':checked')) {
                 selectAll($states);
                 selectAll($cities);
+                showPanIndiaWarning(true);
             } else {
                 deselectAll($states);
                 deselectAll($cities);
+                showPanIndiaWarning(false);
             }
         });
 
@@ -1136,9 +1160,21 @@
     function createCustomDropdown($select, placeholder, id) {
         var selectedValues = $select.val() || [];
         var $wrapper = $('<div class="custom-dropdown" id="' + id + '"></div>');
-        var $btn = $('<div class="custom-dropdown-btn">' + placeholder + '</div>');
+        var $btn = $('<div class="custom-dropdown-btn"></div>');
         var $content = $('<div class="custom-dropdown-content"></div>');
-        
+
+        function updateBtn() {
+            var count = $content.find('.selected').length;
+            var total = $content.find('> div').length;
+            if (count === 0) {
+                $btn.html(placeholder);
+            } else if (count === total) {
+                $btn.html('<span style="color:#10b981;font-weight:700">✔ All ' + total + ' selected</span>');
+            } else {
+                $btn.html('<span style="color:#4f46e5;font-weight:700">' + count + ' of ' + total + ' selected</span>');
+            }
+        }
+
         // Add options
         $select.find('option').each(function() {
             var value = $(this).val();
@@ -1149,35 +1185,37 @@
                 $content.append($option);
             }
         });
-        
+
         $wrapper.append($btn).append($content);
         $select.after($wrapper);
-        
+        updateBtn();
+
         // Toggle dropdown
         $btn.on('click', function(e) {
             e.stopPropagation();
             $('.custom-dropdown-content').not($content).hide();
             $content.toggle();
         });
-        
+
         // Select option
         $content.on('click', '> div', function() {
             $(this).toggleClass('selected');
-            
-            // Update hidden select
+
             var selected = [];
             $content.find('.selected').each(function() {
                 selected.push($(this).data('value'));
             });
             $select.val(selected).trigger('change');
-            
-            console.log('Dropdown changed for:', id, 'Selected:', selected);
+            updateBtn();
         });
-        
+
         // Close on outside click
         $(document).on('click', function() {
             $content.hide();
         });
+
+        // Expose updateBtn so selectAll/deselectAll can refresh it
+        $wrapper.data('updateBtn', updateBtn);
     }
     
     // ==================== FORM BUILDER v2 ====================
