@@ -93,9 +93,13 @@ class CategoryWithSubcategoriesSerializer(serializers.ModelSerializer):
             
             if city_id:
                 product_filter &= (
-                    Q(products__is_pan_india=True) |
-                    Q(products__available_cities__id=city_id) |
-                    Q(products__available_cities__isnull=True)
+                    Q(products__is_pan_india=True)
+                    | Q(products__available_cities__id=city_id)
+                    | Q(products__available_states__id=state_id, products__available_cities__isnull=True)
+                ) if state_id else (
+                    Q(products__is_pan_india=True)
+                    | Q(products__available_cities__id=city_id)
+                    | Q(products__available_cities__isnull=True)
                 )
             
             subcategories = subcategories.filter(product_filter).distinct()
@@ -168,16 +172,20 @@ class CategoryListView(generics.ListAPIView):
 
         if city_id:
             product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__id=city_id) |
-                Q(products__available_cities__isnull=True)
+                Q(products__is_pan_india=True)
+                | Q(products__available_cities__id=city_id)
+                | Q(products__available_states__id=state_id, products__available_cities__isnull=True)
+            ) if state_id else (
+                Q(products__is_pan_india=True)
+                | Q(products__available_cities__id=city_id)
+                | Q(products__available_cities__isnull=True)
             )
             has_location_filter = True
         elif city_slug:
             product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__slug=city_slug) |
-                Q(products__available_cities__isnull=True)
+                Q(products__is_pan_india=True)
+                | Q(products__available_cities__slug=city_slug)
+                | Q(products__available_cities__isnull=True)
             )
             has_location_filter = True
         
@@ -263,9 +271,13 @@ class FeaturedCategoriesView(generics.ListAPIView):
 
         if city_id:
             product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__id=city_id) |
-                Q(products__available_cities__isnull=True)
+                Q(products__is_pan_india=True)
+                | Q(products__available_cities__id=city_id)
+                | Q(products__available_states__id=state_id, products__available_cities__isnull=True)
+            ) if state_id else (
+                Q(products__is_pan_india=True)
+                | Q(products__available_cities__id=city_id)
+                | Q(products__available_cities__isnull=True)
             )
             has_location_filter = True
 
@@ -374,9 +386,13 @@ class SubcategoryListView(generics.ListAPIView):
 
         if city_id:
             product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__id=city_id) |
-                Q(products__available_cities__isnull=True)
+                Q(products__is_pan_india=True)
+                | Q(products__available_cities__id=city_id)
+                | Q(products__available_states__id=state_id, products__available_cities__isnull=True)
+            ) if state_id else (
+                Q(products__is_pan_india=True)
+                | Q(products__available_cities__id=city_id)
+                | Q(products__available_cities__isnull=True)
             )
             has_location_filter = True
 
@@ -452,9 +468,13 @@ class CategoriesWithProductsView(APIView):
 
         if city_id:
             product_filter &= (
-                Q(is_pan_india=True) |
-                Q(available_cities__id=city_id) |
-                Q(available_cities__isnull=True)
+                Q(is_pan_india=True)
+                | Q(available_cities__id=city_id)
+                | Q(available_states__id=state_id, available_cities__isnull=True)
+            ) if state_id else (
+                Q(is_pan_india=True)
+                | Q(available_cities__id=city_id)
+                | Q(available_cities__isnull=True)
             )
         
         # Get products matching the filter

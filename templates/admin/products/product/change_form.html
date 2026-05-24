@@ -1035,7 +1035,6 @@
 
         function selectAll($select) {
             $select.find('option').prop('selected', true);
-            // Also update custom dropdown UI if present
             var id = $select.attr('id') === 'id_available_states' ? 'stateDropdown' : 'cityDropdown';
             $('#' + id + ' .custom-dropdown-content > div').addClass('selected');
         }
@@ -1046,7 +1045,18 @@
             $('#' + id + ' .custom-dropdown-content > div').removeClass('selected');
         }
 
-        function togglePanIndia() {
+        // Only run selectAll on page load if pan india is checked AND nothing is already selected
+        // (avoids wiping admin's specific state/city selections on refresh)
+        function initPanIndiaState() {
+            if ($checkbox.is(':checked')) {
+                selectAll($states);
+                selectAll($cities);
+            }
+            // If unchecked: do NOT deselect — preserve whatever Django rendered as selected
+        }
+
+        // On manual change: apply full toggle
+        $checkbox.on('change', function() {
             if ($checkbox.is(':checked')) {
                 selectAll($states);
                 selectAll($cities);
@@ -1054,13 +1064,10 @@
                 deselectAll($states);
                 deselectAll($cities);
             }
-        }
+        });
 
-        // Run on page load
-        togglePanIndia();
-
-        // Run on change
-        $checkbox.on('change', togglePanIndia);
+        // Run once on load — only select-all if pan india, never deselect on load
+        initPanIndiaState();
 
         console.log('✅ Pan India toggle ready!');
     }
