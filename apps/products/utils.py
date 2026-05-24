@@ -27,33 +27,46 @@ def calculate_total_price(product, form_data):
             'price_breakdown': []
         }
 
-    for field in product.form_schema:
-        field_name = field.get('name', '')
-        field_type = field.get('field_type', '')
-        has_price = field.get('has_price', False)
+    def process_fields(fields):
+        nonlocal options_price
+        for field in (fields or []):
+            field_name = field.get('name', '')
+            field_type = field.get('field_type', '')
+            has_price  = field.get('has_price', False)
 
-        if not has_price or field_type not in ('dropdown', 'radio'):
-            continue
+            if has_price and field_type in ('dropdown', 'radio', 'checkbox'):
+                selected_value = form_data.get(field_name, '')
+                if not selected_value:
+                    # recurse into all options' nested_fields even if nothing selected
+                    for option in field.get('options', []):
+                        process_fields(option.get('nested_fields') or [])
+                    continue
 
-        selected_value = form_data.get(field_name, '')
-        if not selected_value:
-            continue
+                # checkbox can be a list of selected values
+                selected_list = selected_value if isinstance(selected_value, list) else [selected_value]
 
-        for option in field.get('options', []):
-            opt_value = option.get('value', '')
-            opt_label = option.get('label', '')
-            if opt_value == selected_value or opt_label == selected_value:
-                option_price = Decimal(str(option.get('price', 0)))
-                if option_price > 0:
-                    options_price += option_price
-                    price_breakdown.append({
-                        'field_name': field_name,
-                        'field_label': field.get('label', ''),
-                        'option_label': opt_label,
-                        'option_value': opt_value,
-                        'price': float(option_price)
-                    })
-                break
+                for option in field.get('options', []):
+                    opt_value = option.get('value', '')
+                    opt_label = option.get('label', '')
+                    if opt_value in selected_list or opt_label in selected_list:
+                        option_price = Decimal(str(option.get('price', 0)))
+                        if option_price > 0:
+                            options_price += option_price
+                            price_breakdown.append({
+                                'field_name': field_name,
+                                'field_label': field.get('label', ''),
+                                'option_label': opt_label,
+                                'option_value': opt_value,
+                                'price': float(option_price)
+                            })
+                        # recurse into nested_fields of every selected option
+                        process_fields(option.get('nested_fields') or [])
+            else:
+                # non-priced field — still recurse into nested_fields of its options
+                for option in field.get('options', []):
+                    process_fields(option.get('nested_fields') or [])
+
+    process_fields(product.form_schema)
 
     total_price = base_price + options_price
 
@@ -69,28 +82,31 @@ def get_priced_fields_from_schema(form_schema):
     """
     Extract fields with pricing info from form schema.
     Frontend uses this to show dynamic prices in dropdown options.
-    
-    Returns list of fields that have has_price=True
+    Returns list of fields that have has_price=True (including nested).
     """
     priced_fields = []
-    
-    if not form_schema or not isinstance(form_schema, list):
-        return priced_fields
-    
-    for field in form_schema:
-        if field.get('has_price', False) and field.get('type') in ('dropdown', 'radio'):
-            priced_fields.append({
-                'id': field.get('id', ''),
-                'label': field.get('label', ''),
-                'type': field.get('type', ''),
-                'options': [
-                    {
-                        'label': opt.get('label', ''),
-                        'value': opt.get('value', ''),
-                        'price': opt.get('price', 0)
-                    }
-                    for opt in field.get('options', [])
-                ]
-            })
-    
+
+    def collect(fields):
+        for field in (fields or []):
+            if field.get('has_price', False) and field.get('field_type') in ('dropdown', 'radio', 'checkbox'):
+                priced_fields.append({
+                    'id': field.get('id', ''),
+                    'label': field.get('label', ''),
+                    'name': field.get('name', ''),
+                    'field_type': field.get('field_type', ''),
+                    'options': [
+                        {
+                            'label': opt.get('label', ''),
+                            'value': opt.get('value', ''),
+                            'price': opt.get('price', 0)
+                        }
+                        for opt in field.get('options', [])
+                    ]
+                })
+            for opt in field.get('options', []):
+                collect(opt.get('nested_fields') or [])
+
+    if form_schema and isinstance(form_schema, list):
+        collect(form_schema)
+
     return priced_fields
