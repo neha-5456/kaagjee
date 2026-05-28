@@ -730,6 +730,13 @@ def _render_template(template, form_data, form_schema=None):
     """
     import re
 
+    def normalize_template_html(html):
+        html = re.sub(r'<span[^>]*>\s*\{\{\s*</span>', '{{', html)
+        html = re.sub(r'<span[^>]*>\s*\}\}\s*</span>', '}}', html)
+        return html
+
+    template = normalize_template_html(template)
+
     # Build all possible key->value mappings
     lookup = dict(form_data)  # direct keys
 
