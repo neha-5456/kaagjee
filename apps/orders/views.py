@@ -1494,6 +1494,7 @@ class GeneratePDFView(APIView):
         logger = logging.getLogger(__name__)
         
         lookup = dict(form_data)
+        performa_keys = set()
         logger.info(f"[PDF] Initial lookup from form_data: {list(lookup.keys())}")
         
         def collect(fields):
@@ -1502,8 +1503,11 @@ class GeneratePDFView(APIView):
                 label        = field.get('label', '')
                 performa_key = field.get('performa_key', '').strip()
                 value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
-                if name:         lookup[name]         = value
-                if performa_key: lookup[performa_key] = value
+                if name:
+                    lookup[name] = value
+                if performa_key:
+                    lookup[performa_key] = value
+                    performa_keys.add(performa_key)
                 if label:
                     normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
                     lookup[normalized] = value
@@ -1526,10 +1530,9 @@ class GeneratePDFView(APIView):
                 return match.group(0)  # Return original placeholder if not found
             if isinstance(val, list):
                 val = ', '.join(str(v) for v in val)
+            if key in performa_keys and val:
+                return f'<strong style="font-weight:700;display:inline-block;margin:0 0.12em">{val}</strong>'
             return str(val) if val else ''
-
-        # Parse pages — supports both JSON array format and PAGE_BREAK text format
-        import json as _json
         template = product.preview_template
         pages = []
         try:
