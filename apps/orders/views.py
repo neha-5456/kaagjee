@@ -1516,6 +1516,12 @@ class GeneratePDFView(APIView):
                 )
                 product   = submission.product
                 form_data = submission.form_data
+                # Debug: Log submission data
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"[PDF] Submission {submission_id}: form_data keys = {list(form_data.keys()) if form_data else 'None'}")
+                if form_data and 'registration_number' in form_data:
+                    logger.info(f"[PDF] Found registration_number = {form_data.get('registration_number')}")
             except FormSubmission.DoesNotExist:
                 return Response({'success': False, 'error': 'Submission not found'}, status=404)
         elif product_slug:
@@ -1530,7 +1536,12 @@ class GeneratePDFView(APIView):
             return Response({'success': False, 'error': 'No preview template configured for this product'}, status=400)
 
         # --- build lookup table with field names and performa_keys ---
+        import logging
+        logger = logging.getLogger(__name__)
+        
         lookup = dict(form_data)
+        logger.info(f"[PDF] Initial lookup from form_data: {list(lookup.keys())}")
+        
         def collect(fields):
             for field in (fields or []):
                 name         = field.get('name', '')
@@ -1546,11 +1557,19 @@ class GeneratePDFView(APIView):
                 for opt in (field.get('options') or []):
                     collect(opt.get('nested_fields') or [])
         collect(product.form_schema or [])
+        
+        logger.info(f"[PDF] Final lookup keys after collection: {list(lookup.keys())}")
 
         # --- render template ---
         def replacer(match):
             key = match.group(1).strip()
-            val = lookup.get(key, '')
+            val = lookup.get(key, None)
+            # Debug: Log missing keys (optional - remove later if not needed)
+            if val is None:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"PDF rendering: Key '{key}' not found in lookup. Available keys: {list(lookup.keys())}")
+                return match.group(0)  # Return original placeholder if not found
             if isinstance(val, list):
                 val = ', '.join(str(v) for v in val)
             return str(val) if val else ''

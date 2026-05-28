@@ -96,6 +96,13 @@ class FormSubmissionAdmin(admin.ModelAdmin):
 
         form_data   = obj.form_data or {}
         form_schema = product.form_schema or []
+        
+        # Debug: Log form data
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[Admin Preview] FormSubmission {obj.submission_id}: form_data keys = {list(form_data.keys())}")
+        if form_data and 'registration_number' in form_data:
+            logger.info(f"[Admin Preview] Found registration_number = {form_data.get('registration_number')}")
 
         lookup = dict(form_data)
         def collect(fields):
