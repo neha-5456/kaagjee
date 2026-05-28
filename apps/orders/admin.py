@@ -96,30 +96,19 @@ class FormSubmissionAdmin(admin.ModelAdmin):
 
         form_data   = obj.form_data or {}
         form_schema = product.form_schema or []
-        
-        # Debug: Log form data
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"[Admin Preview] FormSubmission {obj.submission_id}: form_data keys = {list(form_data.keys())}")
-        if form_data and 'registration_number' in form_data:
-            logger.info(f"[Admin Preview] Found registration_number = {form_data.get('registration_number')}")
 
         lookup = dict(form_data)
-        def collect(fields):
-            for field in (fields or []):
-                name         = field.get('name', '')
-                label        = field.get('label', '')
-                performa_key = field.get('performa_key', '').strip()
-                value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
-                if name:         lookup[name]         = value
-                if performa_key: lookup[performa_key] = value
-                if label:
-                    normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
-                    lookup[normalized] = value
-                    lookup[label]      = value
-                for opt in (field.get('options') or []):
-                    collect(opt.get('nested_fields') or [])
-        collect(form_schema)
+        for field in form_schema:
+            name         = field.get('name', '')
+            label        = field.get('label', '')
+            performa_key = field.get('performa_key', '').strip()
+            value        = form_data.get(name, '') or form_data.get(performa_key, '')
+            if name:         lookup[name]         = value
+            if performa_key: lookup[performa_key] = value
+            if label:
+                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                lookup[normalized] = value
+                lookup[label]      = value
 
         def replacer(match):
             key = match.group(1).strip()
@@ -128,8 +117,13 @@ class FormSubmissionAdmin(admin.ModelAdmin):
                 val = ', '.join(str(v) for v in val)
             return f'<strong style="color:#1e40af">{val}</strong>' if val else f'<span style="color:#dc2626">({key})</span>'
 
+        def normalize_template_html(html):
+            html = re.sub(r'<span[^>]*>\s*\{\{\s*</span>', '{{', html)
+            html = re.sub(r'<span[^>]*>\s*\}\}\s*</span>', '}}', html)
+            return html
+
         def render_html(html):
-            return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, html)
+            return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, normalize_template_html(html))
 
         pages = []
         try:
@@ -353,23 +347,19 @@ class OrderAdmin(admin.ModelAdmin):
         form_data   = item.form_data or {}
         form_schema = product.form_schema or []
 
-        # Build lookup from form_data + schema keys (with nested field support)
+        # Build lookup from form_data + schema keys
         lookup = dict(form_data)
-        def collect(fields):
-            for field in (fields or []):
-                name         = field.get('name', '')
-                label        = field.get('label', '')
-                performa_key = field.get('performa_key', '').strip()
-                value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
-                if name:         lookup[name]         = value
-                if performa_key: lookup[performa_key] = value
-                if label:
-                    normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
-                    lookup[normalized] = value
-                    lookup[label]      = value
-                for opt in (field.get('options') or []):
-                    collect(opt.get('nested_fields') or [])
-        collect(form_schema)
+        for field in form_schema:
+            name         = field.get('name', '')
+            label        = field.get('label', '')
+            performa_key = field.get('performa_key', '').strip()
+            value        = form_data.get(name, '') or form_data.get(performa_key, '')
+            if name:         lookup[name]         = value
+            if performa_key: lookup[performa_key] = value
+            if label:
+                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                lookup[normalized] = value
+                lookup[label]      = value
 
         def replacer(match):
             key = match.group(1).strip()
@@ -378,8 +368,13 @@ class OrderAdmin(admin.ModelAdmin):
                 val = ', '.join(str(v) for v in val)
             return f'<strong style="color:#1e40af">{val}</strong>' if val else f'<span style="color:#dc2626">({key})</span>'
 
+        def normalize_template_html(html):
+            html = re.sub(r'<span[^>]*>\s*\{\{\s*</span>', '{{', html)
+            html = re.sub(r'<span[^>]*>\s*\}\}\s*</span>', '}}', html)
+            return html
+
         def render_html(html):
-            return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, html)
+            return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, normalize_template_html(html))
 
         # Parse pages
         pages = []
