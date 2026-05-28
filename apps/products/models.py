@@ -34,6 +34,8 @@ class Product(models.Model):
     # ========================
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products',
                                  verbose_name='Category')
+    categories = models.ManyToManyField(Category, blank=True, related_name='products_categories',
+                                        verbose_name='Categories')
     subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='products', verbose_name='Subcategory',
                                     help_text='Optional')

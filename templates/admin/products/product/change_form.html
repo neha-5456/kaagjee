@@ -981,7 +981,7 @@
     
     // ==================== CATEGORY → SUBCATEGORY ====================
     function initCategoryFilter() {
-        var $cat = $('#id_category');
+        var $cat = $('#id_categories');
         var $subcat = $('#id_subcategory');
         
         if (!$cat.length || !$subcat.length) {
@@ -991,20 +991,22 @@
         
         console.log('✅ Category filter init');
         var currentSub = $subcat.val();
-        
-        $cat.after('<div class="cascade-note" id="cat-note"><i class="fas fa-info-circle"></i> Select category</div>');
+
+        // Create custom dropdown similar to states
+        createCustomDropdown($cat, 'Select Categories', 'categoryDropdown');
+        $('.field-categories').append('<div class="cascade-note" id="cat-note"><i class="fas fa-info-circle"></i> Select categories</div>');
         
         $cat.on('change', function() {
-            var catId = $(this).val();
-            if (!catId) {
+            var catIds = $(this).val();
+            if (!catIds || !catIds.length) {
                 $subcat.html('<option value="">---------</option>');
-                $('#cat-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select category');
+                $('#cat-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select categories');
                 return;
             }
             
             $('#cat-note').addClass('warning').removeClass('success error').html('<i class="fas fa-spinner fa-spin"></i> Loading...');
             
-            $.get('/admin/products/product/ajax/get-subcategories/', {category_id: catId})
+            $.get('/admin/products/product/ajax/get-subcategories/', {category_ids: catIds.join(',')})
                 .done(function(data) {
                     $subcat.html('<option value="">---------</option>');
                     if (data.subcategories && data.subcategories.length) {
@@ -1022,7 +1024,7 @@
                 });
         });
         
-        if ($cat.val()) $cat.trigger('change');
+        if ($cat.val() && $cat.val().length) $cat.trigger('change');
     }
     
     // ==================== PAN INDIA TOGGLE ====================

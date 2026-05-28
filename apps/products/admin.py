@@ -28,11 +28,32 @@ class ProductAdminForm(forms.ModelForm):
         widgets = {
             'available_states': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
             'available_cities': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
+            'categories': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['subcategory'].required = False
+        if 'category' in self.fields:
+            self.fields['category'].required = False
+            self.fields['category'].widget = forms.HiddenInput()
+
+        if self.instance and self.instance.pk:
+            if 'categories' in self.fields:
+                if self.instance.categories.exists():
+                    self.initial['categories'] = list(self.instance.categories.values_list('pk', flat=True))
+                elif self.instance.category_id:
+                    self.initial['categories'] = [self.instance.category_id]
+
+    def save(self, commit=True):
+        product = super().save(commit=False)
+        categories = self.cleaned_data.get('categories')
+
+        product.category = categories[0] if categories else None
+
+        if commit:
+            product.save()
+            self.save_m2m()
+        return product
 
 
 # ========================
@@ -58,9 +79,9 @@ class ProductFAQInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     form = ProductAdminForm
-    list_display = ['title', 'category', 'status_badge', 'price_display', 'form_fields_badge',
+    list_display = ['title', 'categories_display', 'status_badge', 'price_display', 'form_fields_badge',
                     'orders_count', 'duplicate_btn', 'created_at']
-    list_filter = ['status', 'category', 'is_pan_india']
+    list_filter = ['status', 'categories', 'is_pan_india']
     list_editable = []
     search_fields = ['title', 'short_description']
     prepopulated_fields = {'slug': ('title',)}
@@ -73,8 +94,8 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('title', 'slug', 'short_description', 'description', 'featured_image', 'youtube_link'),
         }),
         ('📁 Category', {
-            'fields': ('category', 'subcategory'),
-            'description': '<div style="background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> First select Category, then Subcategory will be automatically filtered!</div>'
+            'fields': ('categories', 'subcategory'),
+            'description': '<div style="background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> Select one or more Categories, then Subcategory will be automatically filtered!</div>'
         }),
         ('📍 Location', {
             'fields': ('is_pan_india', 'available_states', 'available_cities'),
@@ -113,6 +134,7 @@ class ProductAdmin(admin.ModelAdmin):
         }
         js = [
             'https://cdn.quilljs.com/1.3.7/quill.min.js',
+            'apps/products/js/product_admin.js',
         ]
 
     def get_urls(self):
@@ -154,9 +176,14 @@ class ProductAdmin(admin.ModelAdmin):
         new_product.views_count  = 0
         new_product.form_schema  = copy.deepcopy(original.form_schema)
         new_product.preview_template = original.preview_template
+        new_product.category = original.category
         new_product.save()
 
-        # Copy M2M — states & cities
+        # Copy M2M — categories, states & cities
+        if original.categories.exists():
+            new_product.categories.set(original.categories.all())
+        elif original.category_id:
+            new_product.categories.set([original.category_id])
         new_product.available_states.set(original.available_states.all())
         new_product.available_cities.set(original.available_cities.all())
 
@@ -177,11 +204,12 @@ class ProductAdmin(admin.ModelAdmin):
 
     def get_subcategories_ajax(self, request):
         """AJAX: Get subcategories by category"""
-        category_id = request.GET.get('category_id', '')
+        category_ids = request.GET.get('category_ids', '') or request.GET.get('category_id', '')
+        category_id_list = [int(x) for x in category_ids.split(',') if x.strip()] if category_ids else []
         
-        if category_id:
+        if category_id_list:
             subcategories = Subcategory.objects.filter(
-                category_id=category_id, 
+                category_id__in=category_id_list,
                 is_active=True
             ).values('id', 'name')
             return JsonResponse({
@@ -189,6 +217,13 @@ class ProductAdmin(admin.ModelAdmin):
                 'subcategories': list(subcategories)
             })
         return JsonResponse({'success': True, 'subcategories': []})
+
+    def categories_display(self, obj):
+        categories = obj.categories.all()
+        if categories.exists():
+            return ', '.join([category.name for category in categories])
+        return obj.category.name if obj.category else '-'
+    categories_display.short_description = 'Categories'
 
     def get_cities_ajax(self, request):
         """AJAX: Get cities by states"""
@@ -235,7 +270,12 @@ class ProductAdmin(admin.ModelAdmin):
             new_p.views_count  = 0
             new_p.form_schema  = copy.deepcopy(original.form_schema)
             new_p.preview_template = original.preview_template
+            new_p.category = original.category
             new_p.save()
+            if original.categories.exists():
+                new_p.categories.set(original.categories.all())
+            elif original.category_id:
+                new_p.categories.set([original.category_id])
             new_p.available_states.set(original.available_states.all())
             new_p.available_cities.set(original.available_cities.all())
             for faq in original.faqs.all():
