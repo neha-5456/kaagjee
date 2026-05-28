@@ -98,17 +98,21 @@ class FormSubmissionAdmin(admin.ModelAdmin):
         form_schema = product.form_schema or []
 
         lookup = dict(form_data)
-        for field in form_schema:
-            name         = field.get('name', '')
-            label        = field.get('label', '')
-            performa_key = field.get('performa_key', '').strip()
-            value        = form_data.get(name, '') or form_data.get(performa_key, '')
-            if name:         lookup[name]         = value
-            if performa_key: lookup[performa_key] = value
-            if label:
-                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
-                lookup[normalized] = value
-                lookup[label]      = value
+        def collect(fields):
+            for field in (fields or []):
+                name         = field.get('name', '')
+                label        = field.get('label', '')
+                performa_key = field.get('performa_key', '').strip()
+                value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
+                if name:         lookup[name]         = value
+                if performa_key: lookup[performa_key] = value
+                if label:
+                    normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                    lookup[normalized] = value
+                    lookup[label]      = value
+                for opt in (field.get('options') or []):
+                    collect(opt.get('nested_fields') or [])
+        collect(form_schema)
 
         def replacer(match):
             key = match.group(1).strip()
@@ -342,19 +346,23 @@ class OrderAdmin(admin.ModelAdmin):
         form_data   = item.form_data or {}
         form_schema = product.form_schema or []
 
-        # Build lookup from form_data + schema keys
+        # Build lookup from form_data + schema keys (with nested field support)
         lookup = dict(form_data)
-        for field in form_schema:
-            name         = field.get('name', '')
-            label        = field.get('label', '')
-            performa_key = field.get('performa_key', '').strip()
-            value        = form_data.get(name, '') or form_data.get(performa_key, '')
-            if name:         lookup[name]         = value
-            if performa_key: lookup[performa_key] = value
-            if label:
-                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
-                lookup[normalized] = value
-                lookup[label]      = value
+        def collect(fields):
+            for field in (fields or []):
+                name         = field.get('name', '')
+                label        = field.get('label', '')
+                performa_key = field.get('performa_key', '').strip()
+                value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
+                if name:         lookup[name]         = value
+                if performa_key: lookup[performa_key] = value
+                if label:
+                    normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                    lookup[normalized] = value
+                    lookup[label]      = value
+                for opt in (field.get('options') or []):
+                    collect(opt.get('nested_fields') or [])
+        collect(form_schema)
 
         def replacer(match):
             key = match.group(1).strip()

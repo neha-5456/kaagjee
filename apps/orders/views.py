@@ -1529,10 +1529,28 @@ class GeneratePDFView(APIView):
         if not product.preview_template:
             return Response({'success': False, 'error': 'No preview template configured for this product'}, status=400)
 
+        # --- build lookup table with field names and performa_keys ---
+        lookup = dict(form_data)
+        def collect(fields):
+            for field in (fields or []):
+                name         = field.get('name', '')
+                label        = field.get('label', '')
+                performa_key = field.get('performa_key', '').strip()
+                value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
+                if name:         lookup[name]         = value
+                if performa_key: lookup[performa_key] = value
+                if label:
+                    normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                    lookup[normalized] = value
+                    lookup[label]      = value
+                for opt in (field.get('options') or []):
+                    collect(opt.get('nested_fields') or [])
+        collect(product.form_schema or [])
+
         # --- render template ---
         def replacer(match):
             key = match.group(1).strip()
-            val = form_data.get(key, '')
+            val = lookup.get(key, '')
             if isinstance(val, list):
                 val = ', '.join(str(v) for v in val)
             return str(val) if val else ''
