@@ -112,36 +112,55 @@ class OrderItemSerializer(serializers.ModelSerializer):
         ]
 
     def get_rendered_preview(self, obj):
-        import re
         product = obj.product
         if not product or not product.preview_template:
             return None
         if hasattr(product, 'is_preview_enabled') and not product.is_preview_enabled:
             return None
-        form_data   = obj.form_data or {}
-        lookup = dict(form_data)
-        def collect(fields):
-            for field in (fields or []):
-                name         = field.get('name', '')
-                label        = field.get('label', '')
-                performa_key = field.get('performa_key', '').strip()
-                value        = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
-                if name:         lookup[name]         = value
-                if performa_key: lookup[performa_key] = value
-                if label:
-                    normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
-                    lookup[normalized] = value
-                    lookup[label]      = value
-                for opt in (field.get('options') or []):
-                    collect(opt.get('nested_fields') or [])
-        collect(product.form_schema or [])
-        def replacer(match):
-            key = match.group(1).strip()
-            val = lookup.get(key, '')
-            if isinstance(val, list):
-                val = ', '.join(str(v) for v in val)
-            return str(val) if val else match.group(0)
-        return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, product.preview_template)
+        return _render_order_preview_template(product.preview_template, obj.form_data or {}, product.form_schema)
+
+
+def _render_order_preview_template(template, form_data, form_schema=None):
+    import re
+
+    def normalize_template_html(html):
+        html = re.sub(r'<span[^>]*>\s*\{\{\s*</span>', '{{', html)
+        html = re.sub(r'<span[^>]*>\s*\}\}\s*</span>', '}}', html)
+        return html
+
+    template = normalize_template_html(template or '')
+    lookup = dict(form_data or {})
+
+    def collect(fields):
+        for field in (fields or []):
+            name = field.get('name', '')
+            label = field.get('label', '')
+            performa_key = field.get('performa_key', '').strip()
+            value = form_data.get(name, '') or (form_data.get(performa_key, '') if performa_key else '')
+
+            if name:
+                lookup[name] = value
+            if performa_key:
+                lookup[performa_key] = value
+            if label:
+                normalized = re.sub(r'[^\w]+', '_', label.strip()).strip('_').lower()
+                lookup[normalized] = value
+                lookup[label] = value
+
+            for opt in (field.get('options') or []):
+                collect(opt.get('nested_fields') or [])
+
+    if form_schema:
+        collect(form_schema)
+
+    def replacer(match):
+        key = match.group(1).strip()
+        val = lookup.get(key, '')
+        if isinstance(val, list):
+            val = ', '.join(str(v) for v in val)
+        return str(val) if val else match.group(0)
+
+    return re.sub(r'\{\{\s*([\w_ ]+)\s*\}\}', replacer, template)
 
 
 class PaymentSerializer(serializers.ModelSerializer):
