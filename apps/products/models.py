@@ -39,6 +39,9 @@ class Product(models.Model):
     subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='products', verbose_name='Subcategory',
                                     help_text='Optional')
+    subcategories = models.ManyToManyField(Subcategory, blank=True, related_name='products_subcategories',
+                                           verbose_name='Subcategories',
+                                           help_text='Select one or more subcategories for this product')
 
     # ========================
     # LOCATION AVAILABILITY

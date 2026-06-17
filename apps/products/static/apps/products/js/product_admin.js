@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     subcategoriesSelect.appendChild(option);
                 });
+                subcategoriesSelect.dispatchEvent(new Event('change', { bubbles: true }));
             })
             .catch(error => {
                 console.error('Error loading subcategories:', error);

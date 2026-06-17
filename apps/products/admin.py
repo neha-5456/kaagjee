@@ -29,6 +29,7 @@ class ProductAdminForm(forms.ModelForm):
             'available_states': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
             'available_cities': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
             'categories': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
+            'subcategories': forms.SelectMultiple(attrs={'class': 'custom-multi-select'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -43,6 +44,8 @@ class ProductAdminForm(forms.ModelForm):
                     self.initial['categories'] = list(self.instance.categories.values_list('pk', flat=True))
                 elif self.instance.category_id:
                     self.initial['categories'] = [self.instance.category_id]
+            if 'subcategories' in self.fields:
+                self.initial['subcategories'] = list(self.instance.subcategories.values_list('pk', flat=True))
 
     def save(self, commit=True):
         product = super().save(commit=False)
@@ -94,8 +97,8 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('title', 'slug', 'short_description', 'description', 'featured_image', 'youtube_link'),
         }),
         ('📁 Category', {
-            'fields': ('categories', 'subcategory'),
-            'description': '<div style="background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> Select one or more Categories, then Subcategory will be automatically filtered!</div>'
+            'fields': ('categories', 'subcategories'),
+            'description': '<div style="background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:15px;"><strong>💡 Tip:</strong> Select one or more Categories, then Subcategories will be automatically filtered!</div>'
         }),
         ('📍 Location', {
             'fields': ('is_pan_india', 'available_states', 'available_cities'),
@@ -179,11 +182,12 @@ class ProductAdmin(admin.ModelAdmin):
         new_product.category = original.category
         new_product.save()
 
-        # Copy M2M — categories, states & cities
+        # Copy M2M — categories, subcategories, states & cities
         if original.categories.exists():
             new_product.categories.set(original.categories.all())
         elif original.category_id:
             new_product.categories.set([original.category_id])
+        new_product.subcategories.set(original.subcategories.all())
         new_product.available_states.set(original.available_states.all())
         new_product.available_cities.set(original.available_cities.all())
 
@@ -276,6 +280,7 @@ class ProductAdmin(admin.ModelAdmin):
                 new_p.categories.set(original.categories.all())
             elif original.category_id:
                 new_p.categories.set([original.category_id])
+            new_p.subcategories.set(original.subcategories.all())
             new_p.available_states.set(original.available_states.all())
             new_p.available_cities.set(original.available_cities.all())
             for faq in original.faqs.all():

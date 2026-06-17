@@ -350,11 +350,15 @@
     display: none !important;
 }
 .field-available_states,
-.field-available_cities {
+.field-available_cities,
+.field-categories,
+.field-subcategories {
     overflow: visible !important;
 }
 .field-available_states .form-row,
-.field-available_cities .form-row {
+.field-available_cities .form-row,
+.field-categories .form-row,
+.field-subcategories .form-row {
     margin-bottom: 280px;
 }
 </style>
@@ -989,7 +993,7 @@
     // ==================== CATEGORY → SUBCATEGORY ====================
     function initCategoryFilter() {
         var $cat = $('#id_categories');
-        var $subcat = $('#id_subcategory');
+        var $subcat = $('#id_subcategories');
         
         if (!$cat.length || !$subcat.length) {
             console.log('⚠️ Category fields not found');
@@ -997,41 +1001,56 @@
         }
         
         console.log('✅ Category filter init');
-        var currentSub = $subcat.val();
+        var $catDropdown = createCustomDropdown($cat, 'Select Categories', 'categoryDropdown');
+        var $subcatDropdown = createCustomDropdown($subcat, 'Select Subcategories', 'subcategoryDropdown');
+        $('.field-categories').append('<div class="cascade-note" id="cat-note"><i class="fas fa-info-circle"></i> Select categories to filter subcategories</div>');
 
-        // Create custom dropdown similar to states
-        createCustomDropdown($cat, 'Select Categories', 'categoryDropdown');
-        $('.field-categories').append('<div class="cascade-note" id="cat-note"><i class="fas fa-info-circle"></i> Select categories</div>');
-        
-        $cat.on('change', function() {
-            var catIds = $(this).val();
-            if (!catIds || !catIds.length) {
-                $subcat.html('<option value="">---------</option>');
-                $('#cat-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select categories');
+        function refreshSubcategories(categoryIds) {
+            if (!categoryIds || !categoryIds.length) {
+                $subcat.html('');
+                if ($subcatDropdown && $subcatDropdown.data('refresh')) {
+                    $subcatDropdown.data('refresh')();
+                }
+                $('#cat-note').removeClass('success warning error').html('<i class="fas fa-info-circle"></i> Select categories to filter subcategories');
                 return;
             }
-            
-            $('#cat-note').addClass('warning').removeClass('success error').html('<i class="fas fa-spinner fa-spin"></i> Loading...');
-            
-            $.get('/admin/products/product/ajax/get-subcategories/', {category_ids: catIds.join(',')})
+
+            $('#cat-note').addClass('warning').removeClass('success error').html('<i class="fas fa-spinner fa-spin"></i> Loading subcategories...');
+            $.get('/admin/products/product/ajax/get-subcategories/', {category_ids: categoryIds.join(',')})
                 .done(function(data) {
-                    $subcat.html('<option value="">---------</option>');
+                    $subcat.html('');
                     if (data.subcategories && data.subcategories.length) {
                         data.subcategories.forEach(function(s) {
-                            var sel = s.id == currentSub ? ' selected' : '';
-                            $subcat.append('<option value="'+s.id+'"'+sel+'>'+s.name+'</option>');
+                            $subcat.append('<option value="'+s.id+'">'+s.name+'</option>');
                         });
+                        if ($subcatDropdown && $subcatDropdown.data('refresh')) {
+                            $subcatDropdown.data('refresh')();
+                        }
                         $('#cat-note').removeClass('warning error').addClass('success').html('<i class="fas fa-check-circle"></i> '+data.subcategories.length+' subcategories loaded');
                     } else {
+                        if ($subcatDropdown && $subcatDropdown.data('refresh')) {
+                            $subcatDropdown.data('refresh')();
+                        }
                         $('#cat-note').removeClass('success error').addClass('warning').html('<i class="fas fa-exclamation-triangle"></i> No subcategories found');
                     }
                 })
                 .fail(function() {
-                    $('#cat-note').removeClass('success warning').addClass('error').html('<i class="fas fa-times-circle"></i> Error loading!');
+                    $('#cat-note').removeClass('success warning').addClass('error').html('<i class="fas fa-times-circle"></i> Error loading subcategories!');
                 });
+        }
+
+        $cat.on('change', function() {
+            var catIds = $(this).val();
+            refreshSubcategories(catIds);
         });
-        
-        if ($cat.val() && $cat.val().length) $cat.trigger('change');
+
+        if ($cat.val() && $cat.val().length) {
+            refreshSubcategories($cat.val());
+        } else {
+            if ($subcatDropdown && $subcatDropdown.data('refresh')) {
+                $subcatDropdown.data('refresh')();
+            }
+        }
     }
     
     // ==================== PAN INDIA TOGGLE ====================
@@ -1167,10 +1186,28 @@
     }
     
     function createCustomDropdown($select, placeholder, id) {
-        var selectedValues = $select.val() || [];
         var $wrapper = $('<div class="custom-dropdown" id="' + id + '"></div>');
         var $btn = $('<div class="custom-dropdown-btn"></div>');
         var $content = $('<div class="custom-dropdown-content"></div>');
+
+        function renderOptions() {
+            var selectedValues = $select.val() || [];
+            if (!Array.isArray(selectedValues)) {
+                selectedValues = [String(selectedValues)];
+            }
+
+            $content.empty();
+            $select.find('option').each(function() {
+                var value = $(this).val();
+                var text = $(this).text();
+                if (value) {
+                    var isSelected = selectedValues.indexOf(String(value)) > -1 ? ' selected' : '';
+                    var $option = $('<div class="' + isSelected + '" data-value="' + value + '">' + text + ' <span class="checkmark">✔</span></div>');
+                    $content.append($option);
+                }
+            });
+            updateBtn();
+        }
 
         function updateBtn() {
             var count = $content.find('.selected').length;
@@ -1184,20 +1221,13 @@
             }
         }
 
-        // Add options
-        $select.find('option').each(function() {
-            var value = $(this).val();
-            var text = $(this).text();
-            if (value) {
-                var isSelected = selectedValues.indexOf(value) > -1 ? ' selected' : '';
-                var $option = $('<div class="' + isSelected + '" data-value="' + value + '">' + text + ' <span class="checkmark">✔</span></div>');
-                $content.append($option);
-            }
-        });
+        function refreshDropdown() {
+            renderOptions();
+        }
 
+        renderOptions();
         $wrapper.append($btn).append($content);
         $select.after($wrapper);
-        updateBtn();
 
         // Toggle dropdown
         $btn.on('click', function(e) {
@@ -1207,7 +1237,8 @@
         });
 
         // Select option
-        $content.on('click', '> div', function() {
+        $content.on('click', '> div', function(e) {
+            e.stopPropagation();
             $(this).toggleClass('selected');
 
             var selected = [];
@@ -1223,8 +1254,8 @@
             $content.hide();
         });
 
-        // Expose updateBtn so selectAll/deselectAll can refresh it
-        $wrapper.data('updateBtn', updateBtn);
+        $wrapper.data('refresh', refreshDropdown);
+        return $wrapper;
     }
     
     // ==================== FORM BUILDER v2 ====================
