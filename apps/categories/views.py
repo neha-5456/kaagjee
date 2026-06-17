@@ -10,9 +10,79 @@ from rest_framework import serializers, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.db.models import Count, Q
+from django.db.models import Count, Q, F
 from .models import Category, Subcategory
 from apps.products.models import Product
+
+
+def build_category_product_filter(state_id=None, state_code=None, city_id=None, city_slug=None):
+    """
+    Build a product filter that matches products linked to a category
+    through either the foreign key `category` or the many-to-many `categories`.
+    """
+    fk_filter = Q(products__status='active')
+    m2m_filter = Q(products_categories__status='active')
+    has_location_filter = False
+
+    if state_id:
+        fk_filter &= (
+            Q(products__is_pan_india=True) |
+            Q(products__available_states__id=state_id)
+        )
+        m2m_filter &= (
+            Q(products_categories__is_pan_india=True) |
+            Q(products_categories__available_states__id=state_id)
+        )
+        has_location_filter = True
+    elif state_code:
+        fk_filter &= (
+            Q(products__is_pan_india=True) |
+            Q(products__available_states__code__iexact=state_code)
+        )
+        m2m_filter &= (
+            Q(products_categories__is_pan_india=True) |
+            Q(products_categories__available_states__code__iexact=state_code)
+        )
+        has_location_filter = True
+
+    if city_id:
+        if state_id:
+            fk_filter &= (
+                Q(products__is_pan_india=True) |
+                Q(products__available_cities__id=city_id) |
+                Q(products__available_states__id=state_id, products__available_cities__isnull=True)
+            )
+            m2m_filter &= (
+                Q(products_categories__is_pan_india=True) |
+                Q(products_categories__available_cities__id=city_id) |
+                Q(products_categories__available_states__id=state_id, products_categories__available_cities__isnull=True)
+            )
+        else:
+            fk_filter &= (
+                Q(products__is_pan_india=True) |
+                Q(products__available_cities__id=city_id) |
+                Q(products__available_cities__isnull=True)
+            )
+            m2m_filter &= (
+                Q(products_categories__is_pan_india=True) |
+                Q(products_categories__available_cities__id=city_id) |
+                Q(products_categories__available_cities__isnull=True)
+            )
+        has_location_filter = True
+    elif city_slug:
+        fk_filter &= (
+            Q(products__is_pan_india=True) |
+            Q(products__available_cities__slug=city_slug) |
+            Q(products__available_cities__isnull=True)
+        )
+        m2m_filter &= (
+            Q(products_categories__is_pan_india=True) |
+            Q(products_categories__available_cities__slug=city_slug) |
+            Q(products_categories__available_cities__isnull=True)
+        )
+        has_location_filter = True
+
+    return fk_filter | m2m_filter, fk_filter, m2m_filter, has_location_filter
 
 
 # ========================
@@ -153,52 +223,24 @@ class CategoryListView(generics.ListAPIView):
         city_id = params.get('city_id')
         city_slug = params.get('city_slug')
 
-        # Base product filter
-        product_filter = Q(products__status='active')
-        has_location_filter = False
-
-        # Strict condition: state + city both present
-        if state_id and city_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_states__id=state_id, products__available_cities__id=city_id)
-            )
-            has_location_filter = True
-
-        elif state_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_states__id=state_id)
-            )
-            has_location_filter = True
-
-        elif state_code:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_states__code__iexact=state_code)
-            )
-            has_location_filter = True
-
-        elif city_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__id=city_id)
-            )
-            has_location_filter = True
-
-        elif city_slug:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__slug=city_slug)
-            )
-            has_location_filter = True
+        product_filter, fk_filter, m2m_filter, has_location_filter = build_category_product_filter(
+            state_id=state_id,
+            state_code=state_code,
+            city_id=city_id,
+            city_slug=city_slug
+        )
 
         if has_location_filter:
             qs = qs.filter(product_filter).distinct()
             qs = qs.annotate(
-                filtered_products_count=Count(
+                filtered_products_count_products=Count(
                     'products',
-                    filter=product_filter,
+                    filter=fk_filter,
+                    distinct=True
+                ),
+                filtered_products_count_m2m=Count(
+                    'products_categories',
+                    filter=m2m_filter,
                     distinct=True
                 ),
                 filtered_subcategories_count=Count(
@@ -206,19 +248,28 @@ class CategoryListView(generics.ListAPIView):
                     filter=Q(subcategories__is_active=True),
                     distinct=True
                 )
+            ).annotate(
+                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
             ).filter(filtered_products_count__gt=0)
         else:
             qs = qs.annotate(
-                filtered_products_count=Count(
+                filtered_products_count_products=Count(
                     'products',
                     filter=Q(products__status='active'),
                     distinct=True
                 ),
+                filtered_products_count_m2m=Count(
+                    'products_categories',
+                    filter=Q(products_categories__status='active'),
+                    distinct=True
+                ),
                 filtered_subcategories_count=Count(
                     'subcategories',
                     filter=Q(subcategories__is_active=True),
                     distinct=True
                 )
+            ).annotate(
+                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
             )
 
         return qs.order_by('display_order', 'name')
@@ -257,40 +308,29 @@ class FeaturedCategoriesView(generics.ListAPIView):
         state_id = params.get('state_id')
         city_id = params.get('city_id')
         
-        product_filter = Q(products__status='active')
-        has_location_filter = False
-        
-        if state_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_states__id=state_id)
-            )
-            has_location_filter = True
-
-        if city_id:
-            product_filter &= (
-                Q(products__is_pan_india=True)
-                | Q(products__available_cities__id=city_id)
-                | Q(products__available_states__id=state_id, products__available_cities__isnull=True)
-            ) if state_id else (
-                Q(products__is_pan_india=True)
-                | Q(products__available_cities__id=city_id)
-                | Q(products__available_cities__isnull=True)
-            )
-            has_location_filter = True
+        product_filter, fk_filter, m2m_filter, has_location_filter = build_category_product_filter(
+            state_id=state_id,
+            city_id=city_id
+        )
 
         if has_location_filter:
             qs = qs.filter(product_filter).distinct()
             qs = qs.annotate(
-                filtered_products_count=Count('products', filter=product_filter, distinct=True),
+                filtered_products_count_products=Count('products', filter=fk_filter, distinct=True),
+                filtered_products_count_m2m=Count('products_categories', filter=m2m_filter, distinct=True),
                 filtered_subcategories_count=Count('subcategories', filter=Q(subcategories__is_active=True), distinct=True)
+            ).annotate(
+                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
             )
             # Exclude categories with 0 products in the location
             qs = qs.filter(filtered_products_count__gt=0)
         else:
             qs = qs.annotate(
-                filtered_products_count=Count('products', filter=Q(products__status='active'), distinct=True),
+                filtered_products_count_products=Count('products', filter=Q(products__status='active'), distinct=True),
+                filtered_products_count_m2m=Count('products_categories', filter=Q(products_categories__status='active'), distinct=True),
                 filtered_subcategories_count=Count('subcategories', filter=Q(subcategories__is_active=True), distinct=True)
+            ).annotate(
+                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
             )
         
         return qs.order_by('display_order', 'name')
@@ -478,8 +518,10 @@ class CategoriesWithProductsView(APIView):
         # Get products matching the filter
         products = Product.objects.filter(product_filter).distinct()
         
-        # Get unique category IDs that have products
-        category_ids = products.values_list('category_id', flat=True).distinct()
+        # Get unique category IDs that have products through either relation
+        category_ids = set(products.values_list('category_id', flat=True).distinct())
+        category_ids |= set(products.values_list('categories__id', flat=True).distinct())
+        category_ids.discard(None)
         
         # Get categories
         categories = Category.objects.filter(
@@ -491,23 +533,24 @@ class CategoriesWithProductsView(APIView):
         result = []
         for category in categories:
             # Get subcategories for this category that have products
-            subcategory_ids = products.filter(
-                category=category
-            ).values_list('subcategory_id', flat=True).distinct()
-            
+            category_products = products.filter(
+                Q(category=category) | Q(categories=category)
+            ).distinct()
+
+            subcategory_ids = category_products.values_list('subcategory_id', flat=True).distinct()
+
             subcategories = Subcategory.objects.filter(
                 id__in=subcategory_ids,
                 is_active=True
             ).order_by('display_order', 'name')
-            
+
             # Count products per subcategory
             subcategories_data = []
             for subcat in subcategories:
-                subcat_products_count = products.filter(
-                    category=category,
+                subcat_products_count = category_products.filter(
                     subcategory=subcat
                 ).count()
-                
+
                 subcategories_data.append({
                     'id': subcat.id,
                     'name': subcat.name,
@@ -516,13 +559,12 @@ class CategoriesWithProductsView(APIView):
                     'icon': subcat.icon,
                     'products_count': subcat_products_count
                 })
-            
+
             # Products without subcategory
-            no_subcat_count = products.filter(
-                category=category,
+            no_subcat_count = category_products.filter(
                 subcategory__isnull=True
             ).count()
-            
+
             result.append({
                 'id': category.id,
                 'name': category.name,
@@ -531,7 +573,7 @@ class CategoriesWithProductsView(APIView):
                 'icon': category.icon,
                 'image': category.image.url if category.image else None,
                 'is_featured': category.is_featured,
-                'products_count': products.filter(category=category).count(),
+                'products_count': category_products.count(),
                 'products_without_subcategory': no_subcat_count,
                 'subcategories': subcategories_data
             })
