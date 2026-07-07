@@ -325,13 +325,16 @@ class ProductListView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        
-        # Pagination
+
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
+            paginated_response = self.get_paginated_response(serializer.data)
+            paginated_response.data['success'] = True
+            paginated_response.data['count'] = queryset.count()
+            paginated_response.data['data'] = paginated_response.data.pop('results', [])
+            return paginated_response
+
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             'success': True,
@@ -507,11 +510,21 @@ class ProductsByCategoryView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            paginated_response = self.get_paginated_response(serializer.data)
+            paginated_response.data['success'] = True
+            paginated_response.data['category_slug'] = self.kwargs.get('category_slug')
+            paginated_response.data['count'] = queryset.count()
+            return paginated_response
+
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             'success': True,
             'category_slug': self.kwargs.get('category_slug'),
-            'count': len(serializer.data),
+            'count': queryset.count(),
             'data': serializer.data
         })
 

@@ -45,13 +45,29 @@ class ProductAdminForm(forms.ModelForm):
                 elif self.instance.category_id:
                     self.initial['categories'] = [self.instance.category_id]
             if 'subcategories' in self.fields:
-                self.initial['subcategories'] = list(self.instance.subcategories.values_list('pk', flat=True))
+                selected_subcategory_ids = list(self.instance.subcategories.values_list('pk', flat=True))
+                self.initial['subcategories'] = selected_subcategory_ids
+
+                related_category_ids = list(self.instance.categories.values_list('pk', flat=True))
+                if self.instance.category_id:
+                    related_category_ids.append(self.instance.category_id)
+
+                subcategory_queryset = Subcategory.objects.filter(is_active=True)
+                if related_category_ids:
+                    subcategory_queryset = subcategory_queryset.filter(category_id__in=related_category_ids)
+                if selected_subcategory_ids:
+                    subcategory_queryset = subcategory_queryset | Subcategory.objects.filter(pk__in=selected_subcategory_ids)
+
+                self.fields['subcategories'].queryset = subcategory_queryset.distinct()
 
     def save(self, commit=True):
         product = super().save(commit=False)
-        categories = self.cleaned_data.get('categories')
 
-        product.category = categories[0] if categories else None
+        categories = list(self.cleaned_data.get('categories') or [])
+        subcategories = list(self.cleaned_data.get('subcategories') or [])
+
+        product.category = categories[0] if categories else (product.category if product.pk else None)
+        product.subcategory = subcategories[0] if subcategories else (product.subcategory if product.pk else None)
 
         if commit:
             product.save()

@@ -130,6 +130,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # File Upload Settings
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2097152  # 2MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2097152  # 2MB
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -151,7 +152,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    'PAGE_SIZE': 10,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
