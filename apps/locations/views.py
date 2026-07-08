@@ -4,6 +4,7 @@ CloudServices India - Locations Serializers & Views
 from rest_framework import serializers, generics
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.db.models import Q
 from .models import State, City
 
 
@@ -43,8 +44,16 @@ class StateListView(generics.ListAPIView):
     """List all active states"""
     permission_classes = [AllowAny]
     serializer_class = StateSerializer
-    queryset = State.objects.filter(is_active=True)
-    search_fields = ['name', 'code']
+
+    def get_queryset(self):
+        qs = State.objects.filter(is_active=True)
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(code__icontains=search)
+            )
+        return qs
 
 
 class StateDetailView(generics.RetrieveAPIView):
@@ -59,7 +68,6 @@ class CityListView(generics.ListAPIView):
     """List cities, optionally filtered by state"""
     permission_classes = [AllowAny]
     serializer_class = CitySerializer
-    search_fields = ['name']
 
     def get_queryset(self):
         qs = City.objects.filter(is_active=True).select_related('state')
@@ -72,6 +80,16 @@ class CityListView(generics.ListAPIView):
             qs = qs.filter(state_id=state_id)
         elif state_code:
             qs = qs.filter(state__code=state_code.upper())
+
+        # Search by city name or related state fields
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(slug__icontains=search) |
+                Q(state__name__icontains=search) |
+                Q(state__code__icontains=search)
+            )
         
         # Filter by tier
         tier = self.request.query_params.get('tier')
