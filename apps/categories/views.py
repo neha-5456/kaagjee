@@ -10,79 +10,64 @@ from rest_framework import serializers, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.db.models import Count, Q, F
+from django.db.models import Count, Q, OuterRef, Subquery, IntegerField
 from .models import Category, Subcategory
 from apps.products.models import Product
 
 
-def build_category_product_filter(state_id=None, state_code=None, city_id=None, city_slug=None):
-    """
-    Build a product filter that matches products linked to a category
-    through either the foreign key `category` or the many-to-many `categories`.
-    """
-    fk_filter = Q(products__status='active')
-    m2m_filter = Q(products_categories__status='active')
+def build_product_location_filter(state_id=None, state_code=None, city_id=None, city_slug=None):
+    """Build a compact location-aware filter for active products."""
+    product_filter = Q(status='active')
     has_location_filter = False
 
     if state_id:
-        fk_filter &= (
-            Q(products__is_pan_india=True) |
-            Q(products__available_states__id=state_id)
-        )
-        m2m_filter &= (
-            Q(products_categories__is_pan_india=True) |
-            Q(products_categories__available_states__id=state_id)
+        product_filter &= (
+            Q(is_pan_india=True) |
+            Q(available_states__id=state_id)
         )
         has_location_filter = True
     elif state_code:
-        fk_filter &= (
-            Q(products__is_pan_india=True) |
-            Q(products__available_states__code__iexact=state_code)
-        )
-        m2m_filter &= (
-            Q(products_categories__is_pan_india=True) |
-            Q(products_categories__available_states__code__iexact=state_code)
+        product_filter &= (
+            Q(is_pan_india=True) |
+            Q(available_states__code__iexact=state_code)
         )
         has_location_filter = True
 
     if city_id:
         if state_id:
-            fk_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__id=city_id) |
-                Q(products__available_states__id=state_id, products__available_cities__isnull=True)
-            )
-            m2m_filter &= (
-                Q(products_categories__is_pan_india=True) |
-                Q(products_categories__available_cities__id=city_id) |
-                Q(products_categories__available_states__id=state_id, products_categories__available_cities__isnull=True)
+            product_filter &= (
+                Q(is_pan_india=True) |
+                Q(available_cities__id=city_id) |
+                Q(available_states__id=state_id, available_cities__isnull=True)
             )
         else:
-            fk_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_cities__id=city_id) |
-                Q(products__available_cities__isnull=True)
-            )
-            m2m_filter &= (
-                Q(products_categories__is_pan_india=True) |
-                Q(products_categories__available_cities__id=city_id) |
-                Q(products_categories__available_cities__isnull=True)
+            product_filter &= (
+                Q(is_pan_india=True) |
+                Q(available_cities__id=city_id) |
+                Q(available_cities__isnull=True)
             )
         has_location_filter = True
     elif city_slug:
-        fk_filter &= (
-            Q(products__is_pan_india=True) |
-            Q(products__available_cities__slug=city_slug) |
-            Q(products__available_cities__isnull=True)
-        )
-        m2m_filter &= (
-            Q(products_categories__is_pan_india=True) |
-            Q(products_categories__available_cities__slug=city_slug) |
-            Q(products_categories__available_cities__isnull=True)
+        product_filter &= (
+            Q(is_pan_india=True) |
+            Q(available_cities__slug=city_slug) |
+            Q(available_cities__isnull=True)
         )
         has_location_filter = True
 
-    return fk_filter | m2m_filter, fk_filter, m2m_filter, has_location_filter
+    return product_filter, has_location_filter
+
+
+def annotate_category_product_count(queryset, product_filter):
+    """Annotate category queryset with a single efficient product count."""
+    return queryset.annotate(
+        filtered_products_count=Subquery(
+            Product.objects.filter(
+                Q(category_id=OuterRef('pk')) | Q(categories__id=OuterRef('pk')),
+            ).filter(product_filter).values('id').distinct().annotate(count=Count('id')).values('count')[:1],
+            output_field=IntegerField()
+        )
+    )
 
 
 # ========================
@@ -148,43 +133,34 @@ class CategoryWithSubcategoriesSerializer(serializers.ModelSerializer):
 
     def get_subcategories(self, obj):
         state_id = self.context.get('state_id')
+        state_code = self.context.get('state_code')
         city_id = self.context.get('city_id')
-        
+        city_slug = self.context.get('city_slug')
+
         subcategories = obj.subcategories.filter(is_active=True)
-        
-        if state_id or city_id:
-            product_filter = Q(products__status='active')
-            
-            if state_id:
-                product_filter &= (
-                    Q(products__is_pan_india=True) | 
-                    Q(products__available_states__id=state_id)
-                )
-            
-            if city_id:
-                product_filter &= (
-                    Q(products__is_pan_india=True)
-                    | Q(products__available_cities__id=city_id)
-                    | Q(products__available_states__id=state_id, products__available_cities__isnull=True)
-                ) if state_id else (
-                    Q(products__is_pan_india=True)
-                    | Q(products__available_cities__id=city_id)
-                    | Q(products__available_cities__isnull=True)
-                )
-            
-            subcategories = subcategories.filter(product_filter).distinct()
-            subcategories = subcategories.annotate(
-                filtered_products_count=Count(
-                    'products',
-                    filter=product_filter,
-                    distinct=True
-                )
+        product_filter, has_location_filter = build_product_location_filter(
+            state_id=state_id,
+            state_code=state_code,
+            city_id=city_id,
+            city_slug=city_slug,
+        )
+
+        if has_location_filter:
+            matching_products = Product.objects.filter(product_filter).distinct()
+            subcategory_ids = subcategories.filter(
+                Q(products__in=matching_products)
+            ).values_list('id', flat=True).distinct()
+            subcategories = subcategories.filter(id__in=subcategory_ids)
+
+        subcategories = subcategories.annotate(
+            filtered_products_count=Subquery(
+                Product.objects.filter(
+                    Q(subcategories__id=OuterRef('pk'))
+                ).filter(product_filter).values('id').distinct().annotate(count=Count('id')).values('count')[:1],
+                output_field=IntegerField()
             )
-        else:
-            subcategories = subcategories.annotate(
-                filtered_products_count=Count('products', filter=Q(products__status='active'))
-            )
-        
+        )
+
         return SubcategorySerializer(subcategories, many=True).data
 
 
@@ -223,54 +199,31 @@ class CategoryListView(generics.ListAPIView):
         city_id = params.get('city_id')
         city_slug = params.get('city_slug')
 
-        product_filter, fk_filter, m2m_filter, has_location_filter = build_category_product_filter(
+        product_filter, has_location_filter = build_product_location_filter(
             state_id=state_id,
             state_code=state_code,
             city_id=city_id,
-            city_slug=city_slug
+            city_slug=city_slug,
         )
 
         if has_location_filter:
-            qs = qs.filter(product_filter).distinct()
-            qs = qs.annotate(
-                filtered_products_count_products=Count(
-                    'products',
-                    filter=fk_filter,
-                    distinct=True
-                ),
-                filtered_products_count_m2m=Count(
-                    'products_categories',
-                    filter=m2m_filter,
-                    distinct=True
-                ),
-                filtered_subcategories_count=Count(
-                    'subcategories',
-                    filter=Q(subcategories__is_active=True),
-                    distinct=True
-                )
-            ).annotate(
-                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
-            ).filter(filtered_products_count__gt=0)
-        else:
-            qs = qs.annotate(
-                filtered_products_count_products=Count(
-                    'products',
-                    filter=Q(products__status='active'),
-                    distinct=True
-                ),
-                filtered_products_count_m2m=Count(
-                    'products_categories',
-                    filter=Q(products_categories__status='active'),
-                    distinct=True
-                ),
-                filtered_subcategories_count=Count(
-                    'subcategories',
-                    filter=Q(subcategories__is_active=True),
-                    distinct=True
-                )
-            ).annotate(
-                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
+            matching_products = Product.objects.filter(product_filter).distinct()
+            category_ids = Category.objects.filter(
+                Q(products__in=matching_products) | Q(products_categories__in=matching_products)
+            ).values_list('id', flat=True).distinct()
+            qs = qs.filter(id__in=category_ids)
+
+        qs = annotate_category_product_count(qs, product_filter)
+        qs = qs.annotate(
+            filtered_subcategories_count=Count(
+                'subcategories',
+                filter=Q(subcategories__is_active=True),
+                distinct=True
             )
+        )
+
+        if has_location_filter:
+            qs = qs.filter(filtered_products_count__gt=0)
 
         return qs.order_by('display_order', 'name')
 
@@ -303,36 +256,28 @@ class FeaturedCategoriesView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = Category.objects.filter(is_active=True, is_featured=True)
-        
+
         params = self.request.query_params
         state_id = params.get('state_id')
+        state_code = params.get('state_code')
         city_id = params.get('city_id')
-        
-        product_filter, fk_filter, m2m_filter, has_location_filter = build_category_product_filter(
+        city_slug = params.get('city_slug')
+
+        product_filter, has_location_filter = build_product_location_filter(
             state_id=state_id,
-            city_id=city_id
+            state_code=state_code,
+            city_id=city_id,
+            city_slug=city_slug,
+        )
+
+        qs = annotate_category_product_count(qs, product_filter)
+        qs = qs.annotate(
+            filtered_subcategories_count=Count('subcategories', filter=Q(subcategories__is_active=True), distinct=True)
         )
 
         if has_location_filter:
-            qs = qs.filter(product_filter).distinct()
-            qs = qs.annotate(
-                filtered_products_count_products=Count('products', filter=fk_filter, distinct=True),
-                filtered_products_count_m2m=Count('products_categories', filter=m2m_filter, distinct=True),
-                filtered_subcategories_count=Count('subcategories', filter=Q(subcategories__is_active=True), distinct=True)
-            ).annotate(
-                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
-            )
-            # Exclude categories with 0 products in the location
             qs = qs.filter(filtered_products_count__gt=0)
-        else:
-            qs = qs.annotate(
-                filtered_products_count_products=Count('products', filter=Q(products__status='active'), distinct=True),
-                filtered_products_count_m2m=Count('products_categories', filter=Q(products_categories__status='active'), distinct=True),
-                filtered_subcategories_count=Count('subcategories', filter=Q(subcategories__is_active=True), distinct=True)
-            ).annotate(
-                filtered_products_count=F('filtered_products_count_products') + F('filtered_products_count_m2m')
-            )
-        
+
         return qs.order_by('display_order', 'name')
 
     def list(self, request, *args, **kwargs):
@@ -406,46 +351,31 @@ class SubcategoryListView(generics.ListAPIView):
         state_code = params.get('state_code')
         city_id = params.get('city_id')
         
-        product_filter = Q(products__status='active')
-        has_location_filter = False
-        
-        if state_id:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_states__id=state_id)
-            )
-            has_location_filter = True
-        elif state_code:
-            product_filter &= (
-                Q(products__is_pan_india=True) |
-                Q(products__available_states__code__iexact=state_code)
-            )
-            has_location_filter = True
-
-        if city_id:
-            product_filter &= (
-                Q(products__is_pan_india=True)
-                | Q(products__available_cities__id=city_id)
-                | Q(products__available_states__id=state_id, products__available_cities__isnull=True)
-            ) if state_id else (
-                Q(products__is_pan_india=True)
-                | Q(products__available_cities__id=city_id)
-                | Q(products__available_cities__isnull=True)
-            )
-            has_location_filter = True
+        product_filter, has_location_filter = build_product_location_filter(
+            state_id=state_id,
+            state_code=state_code,
+            city_id=city_id,
+        )
 
         if has_location_filter:
-            qs = qs.filter(product_filter).distinct()
-            qs = qs.annotate(
-                filtered_products_count=Count('products', filter=product_filter, distinct=True)
+            matching_products = Product.objects.filter(product_filter).distinct()
+            subcategory_ids = Subcategory.objects.filter(
+                Q(products__in=matching_products)
+            ).values_list('id', flat=True).distinct()
+            qs = qs.filter(id__in=subcategory_ids)
+
+        qs = qs.annotate(
+            filtered_products_count=Subquery(
+                Product.objects.filter(
+                    Q(subcategories__id=OuterRef('pk'))
+                ).filter(product_filter).values('id').distinct().annotate(count=Count('id')).values('count')[:1],
+                output_field=IntegerField()
             )
-            # Exclude subcategories with 0 products in the location
+        )
+
+        if has_location_filter:
             qs = qs.filter(filtered_products_count__gt=0)
-        else:
-            qs = qs.annotate(
-                filtered_products_count=Count('products', filter=Q(products__status='active'))
-            )
-        
+
         return qs.order_by('display_order', 'name')
 
     def list(self, request, *args, **kwargs):
