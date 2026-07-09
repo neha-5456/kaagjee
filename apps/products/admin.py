@@ -62,6 +62,38 @@ class ProductAdminForm(forms.ModelForm):
 
     def save(self, commit=True):
         product = super().save(commit=False)
+        # If the title was changed in the admin form but the slug was not manually
+        # edited, regenerate a unique slug from the new title so duplicated
+        # products get an updated slug when the admin edits the name.
+        try:
+            changed = set(self.changed_data)
+        except Exception:
+            changed = set()
+
+        # If the title changed, regenerate a unique slug unless the admin
+        # appears to have manually provided a custom slug. We try to detect
+        # manual edits by comparing the submitted slug to sensible defaults
+        # (empty, the old slug, or the slugified old title). If the submitted
+        # slug matches one of those, treat it as "not manually edited" and
+        # regenerate from the new title.
+        if 'title' in changed:
+            from django.utils.text import slugify
+            submitted_slug = (self.cleaned_data.get('slug') or '').strip()
+            old_slug = (self.initial.get('slug') or '').strip()
+            old_title_slug = slugify(self.initial.get('title') or '')
+            # Determine if admin likely manually edited slug
+            manually_edited = bool(submitted_slug and submitted_slug not in ('', old_slug, old_title_slug))
+
+            if not manually_edited:
+                base = slugify(product.title or '')
+                candidate = base or ''
+                counter = 1
+                # Ensure uniqueness (exclude current instance when editing)
+                while candidate and Product.objects.filter(slug=candidate).exclude(pk=product.pk).exists():
+                    candidate = f"{base}-{counter}"
+                    counter += 1
+                if candidate:
+                    product.slug = candidate
 
         categories = list(self.cleaned_data.get('categories') or [])
         subcategories = list(self.cleaned_data.get('subcategories') or [])

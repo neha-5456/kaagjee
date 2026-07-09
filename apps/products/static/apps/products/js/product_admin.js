@@ -109,15 +109,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const initialTitle = titleInput.value || '';
     const initialSlug = slugInput.value || '';
+    // Detect whether the slug looks like it was manually edited before we attach listeners.
+    // If the initial slug differs from the slugified initial title and is not a "-copy" suffix,
+    // assume it was manually edited and avoid overwriting it automatically.
     let slugManuallyEdited = false;
+    try {
+        const slugifiedInitialTitle = slugify(initialTitle);
+        const looksLikeCopy = (initialSlug || '').indexOf('-copy') !== -1;
+        if (initialSlug && initialSlug !== slugifiedInitialTitle && !looksLikeCopy) {
+            slugManuallyEdited = true;
+        }
+    } catch (e) {
+        // If slugify fails for any reason, be conservative and do not mark as manually edited.
+        slugManuallyEdited = false;
+    }
+
+    // Debug log to help diagnose admin pages where the JS might not be loaded.
+    if (window.console && window.console.log) {
+        console.log('product_admin.js loaded — title:', initialTitle, 'slug:', initialSlug, 'manuallyEdited:', slugManuallyEdited);
+    }
 
     // If user types into slug field, consider it manually edited
     slugInput.addEventListener('input', function () {
         slugManuallyEdited = true;
     });
+    slugInput.addEventListener('change', function () {
+        slugManuallyEdited = true;
+    });
 
-    // Update slug when title changes if slug wasn't manually edited
-    titleInput.addEventListener('input', function () {
+    // Update slug when title changes if slug wasn't manually edited.
+    // Listen to both `input` (live typing) and `change`/`blur` (onchange semantics)
+    function maybeUpdateSlug() {
         const currentTitle = titleInput.value || '';
         const currentSlug = slugInput.value || '';
 
@@ -131,5 +153,9 @@ document.addEventListener('DOMContentLoaded', function () {
             // trigger change event so Django admin notices
             slugInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
-    });
+    }
+
+    titleInput.addEventListener('input', maybeUpdateSlug);
+    titleInput.addEventListener('change', maybeUpdateSlug);
+    titleInput.addEventListener('blur', maybeUpdateSlug);
 });
