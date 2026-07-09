@@ -240,11 +240,16 @@ class ProductListView(generics.ListAPIView):
         # ========================================
         subcategory_id = params.get('subcategory')
         subcategory_slug = params.get('subcategory_slug')
-        
+
+        # Support filtering by either the single-FK `subcategory` or the M2M `subcategories`.
         if subcategory_id:
-            qs = qs.filter(subcategory_id=subcategory_id)
+            qs = qs.filter(
+                Q(subcategory_id=subcategory_id) | Q(subcategories__id=subcategory_id)
+            )
         elif subcategory_slug:
-            qs = qs.filter(subcategory__slug=subcategory_slug)
+            qs = qs.filter(
+                Q(subcategory__slug=subcategory_slug) | Q(subcategories__slug=subcategory_slug)
+            )
         
         # ========================================
         # STATE FILTERING
