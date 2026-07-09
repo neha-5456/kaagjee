@@ -92,3 +92,44 @@ document.addEventListener('DOMContentLoaded', function () {
         fetchSubcategories();
     }
 });
+
+// Auto-regenerate slug when title changes (unless slug was manually edited)
+document.addEventListener('DOMContentLoaded', function () {
+    const titleInput = document.getElementById('id_title');
+    const slugInput = document.getElementById('id_slug');
+    if (!titleInput || !slugInput) return;
+
+    function slugify(text) {
+        return text.toString().toLowerCase().trim()
+            .replace(/\s+/g, '-')           // Replace spaces with -
+            .replace(/[^a-z0-9\-]/g, '')    // Remove all non-alphanumeric chars except -
+            .replace(/--+/g, '-')            // Replace multiple - with single -
+            .replace(/^-+|-+$/g, '');        // Trim - from start/end
+    }
+
+    const initialTitle = titleInput.value || '';
+    const initialSlug = slugInput.value || '';
+    let slugManuallyEdited = false;
+
+    // If user types into slug field, consider it manually edited
+    slugInput.addEventListener('input', function () {
+        slugManuallyEdited = true;
+    });
+
+    // Update slug when title changes if slug wasn't manually edited
+    titleInput.addEventListener('input', function () {
+        const currentTitle = titleInput.value || '';
+        const currentSlug = slugInput.value || '';
+
+        const slugMatchesOriginal = currentSlug === slugify(initialTitle);
+        const slugIsCopy = currentSlug.indexOf('-copy') !== -1;
+        const slugIsEmpty = currentSlug.trim() === '';
+
+        if (!slugManuallyEdited && (slugMatchesOriginal || slugIsCopy || slugIsEmpty)) {
+            const newSlug = slugify(currentTitle);
+            slugInput.value = newSlug;
+            // trigger change event so Django admin notices
+            slugInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+});
