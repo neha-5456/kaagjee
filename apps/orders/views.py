@@ -217,6 +217,47 @@ class OrderListSerializer(serializers.ModelSerializer):
         return obj.items.count()
 
 
+class OrderWithAssignedTasksSerializer(serializers.ModelSerializer):
+    """Order with assigned staff tasks"""
+    assigned_tasks = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    payment_type_display = serializers.CharField(source='get_payment_type_display', read_only=True)
+    items_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'order_id', 'status', 'status_display', 'payment_type', 'payment_type_display',
+            'total_amount', 'paid_amount', 'pending_amount',
+            'user_name', 'user_email', 'user_phone', 'user_notes',
+            'items_count', 'assigned_tasks', 'created_at', 'updated_at'
+        ]
+    
+    def get_items_count(self, obj):
+        return obj.items.count()
+    
+    def get_assigned_tasks(self, obj):
+        """Get all tasks assigned to staff for this order, applying filters if provided"""
+        tasks = obj.workflow_tasks.filter(
+            assigned_admin__isnull=False
+        ).select_related('assigned_admin', 'approved_by', 'created_by')
+        
+        # Apply filters from context if available
+        context = self.context or {}
+        task_status_filter = context.get('task_status_filter')
+        admin_phone_filter = context.get('admin_phone_filter')
+        
+        if task_status_filter:
+            tasks = tasks.filter(status=task_status_filter)
+        
+        if admin_phone_filter:
+            tasks = tasks.filter(assigned_admin__phone_number=admin_phone_filter)
+        
+        return OrderTaskWithOrderDetailsSerializer(
+            tasks, many=True, context=self.context
+        ).data
+
+
 class IsSuperAdminPermission(BasePermission):
     """Allow only super admin user roles."""
 
@@ -317,6 +358,61 @@ class OrderTaskSerializer(serializers.ModelSerializer):
         if status:
             instance.status = status
         return super().update(instance, validated_data)
+
+
+class OrderTaskWithOrderDetailsSerializer(serializers.ModelSerializer):
+    """Serializer that includes full order details for task listing."""
+    documents = OrderTaskDocumentSerializer(many=True, read_only=True)
+    assigned_admin_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    order_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderTask
+        fields = [
+            'id', 'order', 'order_details', 'title', 'description', 'assigned_admin',
+            'assigned_admin_name', 'payment_amount', 'status', 'status_display',
+            'remarks', 'requires_file_upload', 'completed_at', 'approved_by', 'approved_by_name',
+            'approved_at', 'payment_released', 'documents',
+            'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'completed_at', 'approved_by', 'approved_at',
+            'payment_released', 'created_by', 'created_at', 'updated_at'
+        ]
+
+    def get_assigned_admin_name(self, obj):
+        if obj.assigned_admin:
+            return getattr(obj.assigned_admin, 'full_name', None) or str(getattr(obj.assigned_admin, 'phone_number', ''))
+        return None
+
+    def get_approved_by_name(self, obj):
+        if obj.approved_by:
+            return getattr(obj.approved_by, 'full_name', None) or str(getattr(obj.approved_by, 'phone_number', ''))
+        return None
+
+    def get_order_details(self, obj):
+        """Return complete order details including items, payments, and status."""
+        order = obj.order
+        return {
+            'id': order.id,
+            'order_id': order.order_id,
+            'status': order.status,
+            'status_display': order.get_status_display(),
+            'payment_type': order.payment_type,
+            'payment_type_display': order.get_payment_type_display(),
+            'total_amount': float(order.total_amount),
+            'paid_amount': float(order.paid_amount),
+            'pending_amount': float(order.pending_amount),
+            'user_name': order.user_name,
+            'user_email': order.user_email,
+            'user_phone': order.user_phone,
+            'user_notes': order.user_notes,
+            'items_count': order.items.count(),
+            'created_at': order.created_at,
+            'updated_at': order.updated_at,
+        }
 
 
 # ========================
@@ -1339,6 +1435,163 @@ class OrderTaskApprovalView(APIView):
         task.save()
         serializer = OrderTaskSerializer(task, context={'request': request})
         return Response({'success': True, 'message': message, 'data': serializer.data})
+
+
+class SuperAdminAssignedTasksView(generics.ListAPIView):
+    """
+    Super admin can view all tasks assigned to staff members with complete order details.
+    
+    GET /api/orders/admin/all-assigned-tasks/
+    
+    Query params:
+    - status: filter by task status (pending, assigned, in_progress, completed, approved, rejected)
+    - order_id: filter by specific order
+    - admin_phone: filter by staff member's phone number
+    """
+    permission_classes = [IsAuthenticated, IsSuperAdminPermission]
+    serializer_class = OrderTaskWithOrderDetailsSerializer
+
+    def get_queryset(self):
+        # Get all tasks assigned to any staff member (not None)
+        qs = OrderTask.objects.filter(
+            assigned_admin__isnull=False
+        ).select_related(
+            'order', 'assigned_admin', 'approved_by', 'created_by'
+        ).order_by('-created_at')
+        
+        # Filter by status if provided
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        
+        # Filter by order_id if provided
+        order_id_filter = self.request.query_params.get('order_id')
+        if order_id_filter:
+            qs = qs.filter(order__order_id=order_id_filter)
+        
+        # Filter by assigned staff member phone if provided
+        admin_phone = self.request.query_params.get('admin_phone')
+        if admin_phone:
+            qs = qs.filter(assigned_admin__phone_number=admin_phone)
+        
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        
+        # Summary statistics
+        total_tasks = queryset.count()
+        pending_tasks = queryset.filter(status__in=[
+            OrderTask.Status.PENDING, 
+            OrderTask.Status.ASSIGNED, 
+            OrderTask.Status.IN_PROGRESS
+        ]).count()
+        completed_tasks = queryset.filter(status=OrderTask.Status.COMPLETED).count()
+        approved_tasks = queryset.filter(status=OrderTask.Status.APPROVED).count()
+        rejected_tasks = queryset.filter(status=OrderTask.Status.REJECTED).count()
+        
+        # Get count of unique staff members with assigned tasks
+        assigned_staff_count = queryset.values('assigned_admin').distinct().count()
+        
+        return Response({
+            'success': True,
+            'summary': {
+                'total_tasks': total_tasks,
+                'assigned_staff_count': assigned_staff_count,
+                'pending_tasks': pending_tasks,
+                'completed_tasks': completed_tasks,
+                'approved_tasks': approved_tasks,
+                'rejected_tasks': rejected_tasks,
+            },
+            'data': serializer.data
+        })
+
+
+class OrdersWithAssignedTasksView(generics.ListAPIView):
+    """
+    Super admin can view all orders that have tasks assigned to staff.
+    Each order includes its assigned tasks with full details.
+    
+    GET /api/orders/admin/orders-with-tasks/
+    
+    Query params:
+    - task_status: filter by task status (pending, assigned, in_progress, completed, approved, rejected)
+    - order_status: filter by order status
+    - admin_phone: filter by staff member's phone number
+    """
+    permission_classes = [IsAuthenticated, IsSuperAdminPermission]
+    serializer_class = OrderWithAssignedTasksSerializer
+
+    def get_queryset(self):
+        # Get all orders that have tasks assigned to staff
+        qs = Order.objects.prefetch_related(
+            'workflow_tasks',
+            'items'
+        ).filter(
+            workflow_tasks__assigned_admin__isnull=False
+        ).distinct().order_by('-created_at')
+        
+        # Filter by order status if provided
+        order_status_filter = self.request.query_params.get('order_status')
+        if order_status_filter:
+            qs = qs.filter(status=order_status_filter)
+        
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        # Additional filtering by task status (done in Python since it's prefetched)
+        task_status_filter = request.query_params.get('task_status')
+        admin_phone_filter = request.query_params.get('admin_phone')
+        
+        # Pass filters to context for the serializer to use
+        context = self.get_serializer_context()
+        context['task_status_filter'] = task_status_filter
+        context['admin_phone_filter'] = admin_phone_filter
+        
+        filtered_orders = []
+        total_filtered_tasks = 0
+        
+        for order in queryset:
+            assigned_tasks = [
+                task for task in order.workflow_tasks.all()
+                if task.assigned_admin_id
+            ]
+            
+            # Filter by task status if provided
+            if task_status_filter:
+                assigned_tasks = [
+                    task for task in assigned_tasks
+                    if task.status == task_status_filter
+                ]
+            
+            # Filter by admin phone if provided
+            if admin_phone_filter:
+                assigned_tasks = [
+                    task for task in assigned_tasks
+                    if str(task.assigned_admin.phone_number) == admin_phone_filter
+                ]
+            
+            # Only include orders that have matching tasks after filtering
+            if assigned_tasks:
+                filtered_orders.append(order)
+                total_filtered_tasks += len(assigned_tasks)
+        
+        serializer = self.get_serializer(filtered_orders, many=True, context=context)
+        
+        # Calculate summary based on filtered data
+        total_orders = len(filtered_orders)
+        
+        return Response({
+            'success': True,
+            'summary': {
+                'total_orders': total_orders,
+                'total_tasks': total_filtered_tasks,
+            },
+            'data': serializer.data
+        })
 
 
 class PendingPaymentsView(APIView):
