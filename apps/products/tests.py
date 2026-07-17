@@ -123,3 +123,66 @@ class ProductListViewTests(TestCase):
         self.assertEqual(payload['count'], 2)
         self.assertEqual(len(payload['data']), 2)
         self.assertEqual(payload['data'][0]['slug'], self.product_two.slug)
+
+    def test_products_by_category_includes_m2m_category_products(self):
+        # Product with no direct FK category but M2M category should still appear
+        product_four = Product.objects.create(
+            title='Product Four',
+            slug='product-four',
+            full_price='160.00',
+            half_price='80.00',
+            status=Product.Status.ACTIVE,
+        )
+        product_four.category = None
+        product_four.save()
+        product_four.categories.set([self.category])
+        product_four.subcategories.set([self.subcategory])
+
+        response = self.client.get(reverse('products:products-by-category', args=[self.category.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        products = payload.get('results') or payload.get('data') or []
+        self.assertIn('product-four', [item['slug'] for item in products])
+
+    def test_products_by_category_only_shows_category_level_products_by_default(self):
+        product_category_level = Product.objects.create(
+            title='Product Category Level',
+            slug='product-category-level',
+            full_price='180.00',
+            half_price='90.00',
+            category=self.category,
+            status=Product.Status.ACTIVE,
+        )
+        product_category_level.categories.set([self.category])
+
+        product_with_sub = Product.objects.create(
+            title='Product With Sub',
+            slug='product-with-sub',
+            full_price='200.00',
+            half_price='100.00',
+            category=self.category,
+            subcategory=self.subcategory,
+            status=Product.Status.ACTIVE,
+        )
+        product_with_sub.categories.set([self.category])
+        product_with_sub.subcategories.set([self.subcategory])
+
+        product_with_fk_sub_only = Product.objects.create(
+            title='Product With FK Sub Only',
+            slug='product-with-fk-sub-only',
+            full_price='220.00',
+            half_price='110.00',
+            category=self.category,
+            subcategory=self.subcategory,
+            status=Product.Status.ACTIVE,
+        )
+        product_with_fk_sub_only.categories.set([self.category])
+
+        response = self.client.get(reverse('products:products-by-category', args=[self.category.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        products = payload.get('results') or payload.get('data') or []
+        self.assertEqual(sorted([item['slug'] for item in products]), sorted(['product-category-level', 'product-with-fk-sub-only']))

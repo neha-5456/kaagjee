@@ -8,6 +8,7 @@ Kaagjee - Orders, Cart & Payment Models
 """
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from apps.products.models import Product
 import uuid
 
@@ -207,7 +208,7 @@ class Order(models.Model):
         elif self.paid_amount > 0:
             if self.status == self.Status.PENDING:
                 self.status = self.Status.PARTIAL_PAID
-        
+
         super().save(*args, **kwargs)
     
     @property
@@ -217,6 +218,105 @@ class Order(models.Model):
     @property
     def has_pending_payment(self):
         return self.pending_amount > 0
+
+
+class OrderTask(models.Model):
+    """Workflow task / step assigned by Super Admin for an order."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ASSIGNED = 'assigned', 'Assigned'
+        IN_PROGRESS = 'in_progress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='workflow_tasks'
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    assigned_admin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_order_tasks'
+    )
+    payment_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    remarks = models.TextField(blank=True)
+    requires_file_upload = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_order_tasks'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    payment_released = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_order_tasks'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Order Task'
+        verbose_name_plural = 'Order Tasks'
+
+    def __str__(self):
+        return f"{self.order.order_id} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        if self.assigned_admin and self.status == self.Status.PENDING:
+            self.status = self.Status.ASSIGNED
+        if self.status == self.Status.COMPLETED and not self.completed_at:
+            self.completed_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    @property
+    def is_approved(self):
+        return self.status == self.Status.APPROVED
+
+    @property
+    def is_rejected(self):
+        return self.status == self.Status.REJECTED
+
+
+class OrderTaskDocument(models.Model):
+    task = models.ForeignKey(
+        OrderTask,
+        on_delete=models.CASCADE,
+        related_name='documents'
+    )
+    file = models.FileField(upload_to='order-task-documents/%Y/%m/%d/')
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_order_task_documents'
+    )
+    description = models.TextField(blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = 'Order Task Document'
+        verbose_name_plural = 'Order Task Documents'
+
+    def __str__(self):
+        return f"Document for {self.task.title} ({self.uploaded_at.date()})"
 
 
 class OrderItem(models.Model):

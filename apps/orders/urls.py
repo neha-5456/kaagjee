@@ -42,4 +42,18 @@ urlpatterns = [
     path('pending-payments/', views.PendingPaymentsView.as_view(), name='pending-payments'),
     path('<str:order_id>/', views.OrderDetailView.as_view(), name='order-detail'),
     path('<str:order_id>/pay-pending/', views.PayPendingAmountView.as_view(), name='pay-pending'),
+
+    # ========================
+    # ORDER TASKS
+    # ========================
+    path('admin/tasks/', views.OrderTaskListCreateView.as_view(), name='order-task-list-create'),
+    path('admin/tasks/<int:task_id>/', views.OrderTaskDetailView.as_view(), name='order-task-detail'),
+    path('admin/tasks/<int:task_id>/<str:action>/', views.OrderTaskApprovalView.as_view(), name='order-task-approval'),
+    path('admin/tasks/assigned/', views.AssignedTaskListView.as_view(), name='assigned-task-list'),
+    path('tasks/<int:task_id>/', views.AssignedTaskDetailView.as_view(), name='assigned-task-detail'),
+    path('tasks/<int:task_id>/complete/', views.AssignedTaskCompleteView.as_view(), name='assigned-task-complete'),
+
+    # Mobile app friendly endpoints
+    path('mobile/tasks/', views.MobileAssignedTaskListView.as_view(), name='mobile-task-list'),
+    path('mobile/tasks/<int:task_id>/submit/', views.MobileTaskSubmitView.as_view(), name='mobile-task-submit'),
 ]

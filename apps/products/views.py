@@ -471,9 +471,10 @@ class ProductsByCategoryView(generics.ListAPIView):
     def get_queryset(self):
         category_slug = self.kwargs.get('category_slug')
         qs = Product.objects.filter(
-            status=Product.Status.ACTIVE,
-            category__slug=category_slug
-        ).select_related('category', 'subcategory')
+            status=Product.Status.ACTIVE
+        ).filter(
+            Q(category__slug=category_slug) | Q(categories__slug=category_slug)
+        ).select_related('category', 'subcategory').prefetch_related('categories', 'subcategories')
         
         params = self.request.query_params
         
@@ -482,9 +483,17 @@ class ProductsByCategoryView(generics.ListAPIView):
         subcategory_slug = params.get('subcategory_slug')
         
         if subcategory_id:
-            qs = qs.filter(subcategory_id=subcategory_id)
+            qs = qs.filter(
+                Q(subcategory_id=subcategory_id) | Q(subcategories__id=subcategory_id)
+            )
         elif subcategory_slug:
-            qs = qs.filter(subcategory__slug=subcategory_slug)
+            qs = qs.filter(
+                Q(subcategory__slug=subcategory_slug) | Q(subcategories__slug=subcategory_slug)
+            )
+        else:
+            # Default category page should list only products without any
+            # selected subcategory, either FK or M2M.
+            qs = qs.filter(subcategory__isnull=True, subcategories__isnull=True)
         
         # State filter
         state_id = params.get('state_id')
@@ -582,14 +591,14 @@ class ProductsByLocationView(generics.ListAPIView):
         category_slug = params.get('category_slug')
         
         if category_id:
-            qs = qs.filter(category_id=category_id)
+            qs = qs.filter(Q(category_id=category_id) | Q(categories__id=category_id))
         elif category_slug:
-            qs = qs.filter(category__slug=category_slug)
+            qs = qs.filter(Q(category__slug=category_slug) | Q(categories__slug=category_slug))
         
         # Subcategory filter
         subcategory_id = params.get('subcategory')
         if subcategory_id:
-            qs = qs.filter(subcategory_id=subcategory_id)
+            qs = qs.filter(Q(subcategory_id=subcategory_id) | Q(subcategories__id=subcategory_id))
         
         return qs.distinct()
 

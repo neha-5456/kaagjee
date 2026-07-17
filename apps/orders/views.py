@@ -9,7 +9,7 @@ Complete flow:
 from rest_framework import serializers, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -20,7 +20,10 @@ import razorpay
 import hmac
 import hashlib
 
-from .models import FormSubmission, Cart, CartItem, Order, OrderItem, Payment
+from .models import (
+    FormSubmission, Cart, CartItem, Order, OrderItem, Payment,
+    OrderTask, OrderTaskDocument
+)
 from apps.products.models import Product
 from apps.products.utils import calculate_total_price
 
@@ -176,6 +179,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
+    workflow_tasks = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     payment_type_display = serializers.CharField(source='get_payment_type_display', read_only=True)
     
@@ -187,8 +191,12 @@ class OrderSerializer(serializers.ModelSerializer):
             'first_payment_amount', 'first_payment_date',
             'second_payment_amount', 'second_payment_date', 'second_payment_due_date',
             'user_name', 'user_email', 'user_phone', 'user_notes',
-            'items', 'payments', 'created_at', 'updated_at'
+            'items', 'payments', 'workflow_tasks', 'created_at', 'updated_at'
         ]
+
+    def get_workflow_tasks(self, obj):
+        tasks = obj.workflow_tasks.select_related('assigned_admin', 'approved_by', 'created_by').all()
+        return OrderTaskSerializer(tasks, many=True, context=self.context).data
 
 
 class OrderListSerializer(serializers.ModelSerializer):
@@ -207,6 +215,108 @@ class OrderListSerializer(serializers.ModelSerializer):
     
     def get_items_count(self, obj):
         return obj.items.count()
+
+
+class IsSuperAdminPermission(BasePermission):
+    """Allow only super admin user roles."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if getattr(user, 'is_superuser', False):
+            return True
+        if getattr(user, 'is_staff', False):
+            return True
+        return getattr(user, 'role', None) == 'admin'
+
+
+class IsTaskAssignedAdmin(BasePermission):
+    """Allow only the assigned admin or super admin."""
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if getattr(user, 'is_superuser', False):
+            return True
+        if getattr(user, 'is_staff', False):
+            return True
+        if getattr(user, 'role', None) == 'admin':
+            return True
+        return obj.assigned_admin_id == getattr(user, 'id', None)
+
+
+class OrderTaskDocumentSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderTaskDocument
+        fields = [
+            'id', 'file', 'file_url', 'description', 'uploaded_by',
+            'uploaded_by_name', 'uploaded_at'
+        ]
+        read_only_fields = ['uploaded_by', 'uploaded_at']
+
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.file.url)
+        return obj.file.url
+
+    def get_uploaded_by_name(self, obj):
+        return getattr(obj.uploaded_by, 'full_name', None) or str(getattr(obj.uploaded_by, 'phone_number', ''))
+
+
+class OrderTaskSerializer(serializers.ModelSerializer):
+    documents = OrderTaskDocumentSerializer(many=True, read_only=True)
+    assigned_admin_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = OrderTask
+        fields = [
+            'id', 'order', 'title', 'description', 'assigned_admin',
+            'assigned_admin_name', 'payment_amount', 'status', 'status_display',
+            'remarks', 'requires_file_upload', 'completed_at', 'approved_by', 'approved_by_name',
+            'approved_at', 'payment_released', 'documents',
+            'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'completed_at', 'approved_by', 'approved_at',
+            'payment_released', 'created_by', 'created_at', 'updated_at'
+        ]
+
+    def get_assigned_admin_name(self, obj):
+        if obj.assigned_admin:
+            return getattr(obj.assigned_admin, 'full_name', None) or str(getattr(obj.assigned_admin, 'phone_number', ''))
+        return None
+
+    def get_approved_by_name(self, obj):
+        if obj.approved_by:
+            return getattr(obj.approved_by, 'full_name', None) or str(getattr(obj.approved_by, 'phone_number', ''))
+        return None
+
+    def validate(self, attrs):
+        if self.instance and self.instance.status == OrderTask.Status.APPROVED:
+            raise serializers.ValidationError('Approved tasks cannot be modified.')
+        return attrs
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        task = OrderTask.objects.create(created_by=request.user, **validated_data)
+        return task
+
+    def update(self, instance, validated_data):
+        assigned_admin = validated_data.get('assigned_admin')
+        status = validated_data.get('status')
+        if assigned_admin and instance.status == OrderTask.Status.PENDING:
+            instance.status = OrderTask.Status.ASSIGNED
+        if status:
+            instance.status = status
+        return super().update(instance, validated_data)
 
 
 # ========================
@@ -1021,6 +1131,214 @@ class OrderDetailView(APIView):
             'success': True,
             'data': OrderSerializer(order).data
         })
+
+
+class OrderTaskListCreateView(APIView):
+    """Super admin can list and create tasks for any order."""
+    permission_classes = [IsAuthenticated, IsSuperAdminPermission]
+
+    def get(self, request):
+        order_id = request.query_params.get('order_id')
+        tasks = OrderTask.objects.select_related(
+            'order', 'assigned_admin', 'approved_by', 'created_by'
+        ).all()
+        if order_id:
+            tasks = tasks.filter(order__order_id=order_id)
+        serializer = OrderTaskSerializer(tasks, many=True, context={'request': request})
+        return Response({'success': True, 'data': serializer.data})
+
+    def post(self, request):
+        serializer = OrderTaskSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            task = serializer.save()
+            return Response({
+                'success': True,
+                'message': 'Order task created',
+                'data': OrderTaskSerializer(task, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderTaskDetailView(APIView):
+    """Super admin can retrieve, update, and delete a task."""
+    permission_classes = [IsAuthenticated, IsSuperAdminPermission]
+
+    def get_object(self, task_id):
+        return get_object_or_404(OrderTask, id=task_id)
+
+    def get(self, request, task_id):
+        task = self.get_object(task_id)
+        serializer = OrderTaskSerializer(task, context={'request': request})
+        return Response({'success': True, 'data': serializer.data})
+
+    def put(self, request, task_id):
+        task = self.get_object(task_id)
+        serializer = OrderTaskSerializer(task, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            task = serializer.save()
+            return Response({'success': True, 'message': 'Order task updated', 'data': OrderTaskSerializer(task, context={'request': request}).data})
+        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, task_id):
+        task = self.get_object(task_id)
+        task.delete()
+        return Response({'success': True, 'message': 'Order task deleted'})
+
+
+class AssignedTaskListView(generics.ListAPIView):
+    """Assigned admins can view tasks assigned to them."""
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderTaskSerializer
+
+    def get_queryset(self):
+        return OrderTask.objects.filter(assigned_admin=self.request.user).select_related(
+            'order', 'assigned_admin', 'approved_by', 'created_by'
+        )
+
+
+class MobileAssignedTaskListView(generics.ListAPIView):
+    """Mobile-friendly endpoint: list only tasks assigned to the current admin."""
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderTaskSerializer
+
+    def get_queryset(self):
+        return OrderTask.objects.filter(assigned_admin=self.request.user).select_related(
+            'order', 'assigned_admin', 'approved_by', 'created_by'
+        ).order_by('-updated_at', '-created_at')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({'success': True, 'data': serializer.data})
+
+
+class AssignedTaskDetailView(APIView):
+    """Assigned admin can retrieve their own task."""
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, task_id):
+        task = get_object_or_404(OrderTask, id=task_id)
+        if task.assigned_admin_id != self.request.user.id and getattr(self.request.user, 'role', None) != 'admin' and not getattr(self.request.user, 'is_superuser', False):
+            return None
+        return task
+
+    def get(self, request, task_id):
+        task = self.get_object(task_id)
+        if not task:
+            return Response({'success': False, 'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = OrderTaskSerializer(task, context={'request': request})
+        return Response({'success': True, 'data': serializer.data})
+
+
+class AssignedTaskCompleteView(APIView):
+    """Assigned admin uploads documents and marks the task as completed."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, task_id):
+        task = get_object_or_404(OrderTask, id=task_id)
+        user = request.user
+        if task.assigned_admin_id != user.id and getattr(user, 'role', None) != 'admin' and not getattr(user, 'is_superuser', False):
+            return Response({'success': False, 'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        remarks = request.data.get('remarks', task.remarks)
+        files = request.FILES.getlist('files') or request.FILES.getlist('documents')
+
+        task.remarks = remarks
+        task.status = OrderTask.Status.COMPLETED
+        task.save()
+
+        documents = []
+        for file in files:
+            doc = OrderTaskDocument.objects.create(
+                task=task,
+                file=file,
+                uploaded_by=user
+            )
+            documents.append(doc)
+
+        serializer = OrderTaskSerializer(task, context={'request': request})
+        return Response({
+            'success': True,
+            'message': 'Task marked completed and documents uploaded',
+            'data': serializer.data
+        })
+
+
+class MobileTaskSubmitView(APIView):
+    """Mobile-friendly endpoint: submit task completion or rejection with notes and uploads."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request, task_id):
+        task = get_object_or_404(OrderTask, id=task_id)
+        user = request.user
+        if task.assigned_admin_id != user.id and getattr(user, 'role', None) != 'admin' and not getattr(user, 'is_superuser', False):
+            return Response({'success': False, 'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        raw_status = request.data.get('status') or request.data.get('action') or request.data.get('decision') or ''
+        action = str(raw_status).strip().lower()
+        remarks = request.data.get('remarks', '')
+        files = request.FILES.getlist('files') or request.FILES.getlist('documents')
+
+        rejected_actions = {'rejected', 'reject', 'rejection', 'declined', 'decline', 'false', '0'}
+        if action in rejected_actions:
+            task.status = OrderTask.Status.REJECTED
+            task.payment_released = False
+            task.approved_by = None
+            task.approved_at = None
+            task.completed_at = None
+        else:
+            task.status = OrderTask.Status.COMPLETED
+            task.payment_released = False
+            task.approved_by = None
+            task.approved_at = None
+
+        task.remarks = remarks
+        task.save()
+
+        for file in files:
+            OrderTaskDocument.objects.create(task=task, file=file, uploaded_by=user)
+
+        serializer = OrderTaskSerializer(task, context={'request': request})
+        return Response({
+            'success': True,
+            'message': 'Task submitted successfully',
+            'task_id': task.id,
+            'data': serializer.data
+        })
+
+
+class OrderTaskApprovalView(APIView):
+    """Super admin approves or rejects a completed task."""
+    permission_classes = [IsAuthenticated, IsSuperAdminPermission]
+
+    def post(self, request, task_id, action):
+        task = get_object_or_404(OrderTask, id=task_id)
+        if task.status != OrderTask.Status.COMPLETED:
+            return Response({'success': False, 'error': 'Only completed tasks can be approved or rejected'}, status=status.HTTP_400_BAD_REQUEST)
+
+        remarks = request.data.get('remarks', '')
+        if action == 'approve':
+            task.status = OrderTask.Status.APPROVED
+            task.approved_by = request.user
+            task.approved_at = timezone.now()
+            task.payment_released = True
+            message = 'Task approved'
+        else:
+            task.status = OrderTask.Status.REJECTED
+            task.approved_by = request.user
+            task.approved_at = timezone.now()
+            task.payment_released = False
+            message = 'Task rejected'
+
+        task.remarks = remarks
+        task.save()
+        serializer = OrderTaskSerializer(task, context={'request': request})
+        return Response({'success': True, 'message': message, 'data': serializer.data})
 
 
 class PendingPaymentsView(APIView):

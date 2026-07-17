@@ -1006,11 +1006,8 @@
         $('.field-categories').append('<div class="cascade-note" id="cat-note"><i class="fas fa-info-circle"></i> Select categories to filter subcategories</div>');
 
         function refreshSubcategories(categoryIds) {
-            var currentSelection = ($subcat.val() || []).map(function(v) { return String(v); });
-
             if (!categoryIds || !categoryIds.length) {
                 $subcat.html('');
-                $subcat.val([]).trigger('change');
                 if ($subcatDropdown && $subcatDropdown.data('refresh')) {
                     $subcatDropdown.data('refresh')();
                 }
@@ -1022,27 +1019,18 @@
             $.get('/admin/products/product/ajax/get-subcategories/', {category_ids: categoryIds.join(',')})
                 .done(function(data) {
                     $subcat.html('');
-                    var availableSelection = [];
                     if (data.subcategories && data.subcategories.length) {
                         data.subcategories.forEach(function(s) {
-                            var id = String(s.id);
-                            var $option = $('<option value="'+s.id+'">'+s.name+'</option>');
-                            if (currentSelection.indexOf(id) > -1) {
-                                $option.prop('selected', true);
-                                availableSelection.push(id);
-                            }
-                            $subcat.append($option);
+                            $subcat.append('<option value="'+s.id+'">'+s.name+'</option>');
                         });
-                    }
-
-                    $subcat.val(availableSelection).trigger('change');
-                    if ($subcatDropdown && $subcatDropdown.data('refresh')) {
-                        $subcatDropdown.data('refresh')();
-                    }
-
-                    if (data.subcategories && data.subcategories.length) {
+                        if ($subcatDropdown && $subcatDropdown.data('refresh')) {
+                            $subcatDropdown.data('refresh')();
+                        }
                         $('#cat-note').removeClass('warning error').addClass('success').html('<i class="fas fa-check-circle"></i> '+data.subcategories.length+' subcategories loaded');
                     } else {
+                        if ($subcatDropdown && $subcatDropdown.data('refresh')) {
+                            $subcatDropdown.data('refresh')();
+                        }
                         $('#cat-note').removeClass('success error').addClass('warning').html('<i class="fas fa-exclamation-triangle"></i> No subcategories found');
                     }
                 })
@@ -1255,27 +1243,10 @@
 
             var selected = [];
             $content.find('.selected').each(function() {
-                selected.push(String($(this).data('value')));
+                selected.push($(this).data('value'));
             });
-
-            $select.find('option').prop('selected', false);
-            selected.forEach(function(value) {
-                $select.find('option[value="' + value + '"]').prop('selected', true);
-            });
-            $select.trigger('change');
+            $select.val(selected).trigger('change');
             updateBtn();
-        });
-
-        $select.closest('form').on('submit.customDropdownSync', function() {
-            var selected = [];
-            $content.find('.selected').each(function() {
-                selected.push(String($(this).data('value')));
-            });
-
-            $select.find('option').prop('selected', false);
-            selected.forEach(function(value) {
-                $select.find('option[value="' + value + '"]').prop('selected', true);
-            });
         });
 
         // Close on outside click

@@ -5,7 +5,7 @@ Kaagjee - Orders Admin Configuration
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
 from django.urls import reverse
-from .models import FormSubmission, Cart, CartItem, Order, OrderItem, Payment
+from .models import FormSubmission, Cart, CartItem, Order, OrderItem, Payment, OrderTask, OrderTaskDocument
 
 
 # ========================
@@ -34,6 +34,25 @@ class PaymentInline(admin.TabularInline):
         'razorpay_order_id', 'razorpay_payment_id', 'paid_at'
     ]
     can_delete = False
+
+
+class OrderTaskDocumentInline(admin.TabularInline):
+    model = OrderTaskDocument
+    extra = 0
+    readonly_fields = ['uploaded_by', 'uploaded_at']
+    can_delete = True
+
+
+class OrderTaskInline(admin.TabularInline):
+    model = OrderTask
+    extra = 0
+    fields = [
+        'title', 'description', 'assigned_admin', 'payment_amount',
+        'status', 'remarks', 'requires_file_upload', 'approved_by'
+         
+    ]
+    readonly_fields = ['approved_by', 'approved_at', 'created_by', 'created_at', 'updated_at']
+    show_change_link = True
 
 
 # ========================
@@ -319,7 +338,7 @@ class OrderAdmin(admin.ModelAdmin):
     ]
     date_hierarchy = 'created_at'
     ordering = ['-created_at']
-    inlines = [OrderItemInline, PaymentInline]
+    inlines = [OrderItemInline, OrderTaskInline, PaymentInline]
 
     def get_urls(self):
         from django.urls import path
