@@ -218,8 +218,8 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 
 class OrderWithAssignedTasksSerializer(serializers.ModelSerializer):
-    """Order with assigned staff tasks"""
-    assigned_tasks = serializers.SerializerMethodField()
+    """Order with assigned staff tasks grouped by staff member."""
+    assigned_staff_groups = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     payment_type_display = serializers.CharField(source='get_payment_type_display', read_only=True)
     items_count = serializers.SerializerMethodField()
@@ -230,22 +230,26 @@ class OrderWithAssignedTasksSerializer(serializers.ModelSerializer):
             'id', 'order_id', 'status', 'status_display', 'payment_type', 'payment_type_display',
             'total_amount', 'paid_amount', 'pending_amount',
             'user_name', 'user_email', 'user_phone', 'user_notes',
-            'items_count', 'assigned_tasks', 'created_at', 'updated_at'
+            'items_count', 'assigned_staff_groups', 'created_at', 'updated_at'
         ]
     
     def get_items_count(self, obj):
         return obj.items.count()
     
-    def get_assigned_tasks(self, obj):
-        """Get all tasks assigned to staff for this order, applying filters if provided"""
+    def get_assigned_staff_groups(self, obj):
+        """Group assigned tasks by staff member for this order."""
         tasks = obj.workflow_tasks.filter(
             assigned_admin__isnull=False
         ).select_related('assigned_admin', 'approved_by', 'created_by')
         
-        # Apply filters from context if available
         context = self.context or {}
         task_status_filter = context.get('task_status_filter')
         admin_phone_filter = context.get('admin_phone_filter')
+        current_user_id = context.get('current_user_id')
+        is_superuser = context.get('is_superuser', False)
+        
+        if not is_superuser and current_user_id:
+            tasks = tasks.filter(assigned_admin_id=current_user_id)
         
         if task_status_filter:
             tasks = tasks.filter(status=task_status_filter)
@@ -253,9 +257,21 @@ class OrderWithAssignedTasksSerializer(serializers.ModelSerializer):
         if admin_phone_filter:
             tasks = tasks.filter(assigned_admin__phone_number=admin_phone_filter)
         
-        return OrderTaskWithOrderDetailsSerializer(
-            tasks, many=True, context=self.context
-        ).data
+        grouped = {}
+        for task in tasks:
+            staff_id = task.assigned_admin_id
+            if staff_id not in grouped:
+                grouped[staff_id] = {
+                    'staff_id': staff_id,
+                    'staff_name': getattr(task.assigned_admin, 'full_name', None) or str(getattr(task.assigned_admin, 'phone_number', '')),
+                    'staff_phone': str(task.assigned_admin.phone_number) if task.assigned_admin else None,
+                    'tasks': []
+                }
+            grouped[staff_id]['tasks'].append(
+                OrderTaskInOrderGroupSerializer(task, context=self.context).data
+            )
+
+        return list(grouped.values())
 
 
 class IsSuperAdminPermission(BasePermission):
@@ -358,6 +374,38 @@ class OrderTaskSerializer(serializers.ModelSerializer):
         if status:
             instance.status = status
         return super().update(instance, validated_data)
+
+
+class OrderTaskInOrderGroupSerializer(serializers.ModelSerializer):
+    """Serializer for tasks nested under an order group without repeating full order details."""
+    documents = OrderTaskDocumentSerializer(many=True, read_only=True)
+    assigned_admin_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = OrderTask
+        fields = [
+            'id', 'order', 'title', 'description', 'assigned_admin',
+            'assigned_admin_name', 'payment_amount', 'status', 'status_display',
+            'remarks', 'requires_file_upload', 'completed_at', 'approved_by', 'approved_by_name',
+            'approved_at', 'payment_released', 'documents',
+            'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'completed_at', 'approved_by', 'approved_at',
+            'payment_released', 'created_by', 'created_at', 'updated_at'
+        ]
+
+    def get_assigned_admin_name(self, obj):
+        if obj.assigned_admin:
+            return getattr(obj.assigned_admin, 'full_name', None) or str(getattr(obj.assigned_admin, 'phone_number', ''))
+        return None
+
+    def get_approved_by_name(self, obj):
+        if obj.approved_by:
+            return getattr(obj.approved_by, 'full_name', None) or str(getattr(obj.approved_by, 'phone_number', ''))
+        return None
 
 
 class OrderTaskWithOrderDetailsSerializer(serializers.ModelSerializer):
@@ -1524,13 +1572,23 @@ class OrdersWithAssignedTasksView(generics.ListAPIView):
     serializer_class = OrderWithAssignedTasksSerializer
 
     def get_queryset(self):
-        # Get all orders that have tasks assigned to staff
-        qs = Order.objects.prefetch_related(
-            'workflow_tasks',
-            'items'
-        ).filter(
-            workflow_tasks__assigned_admin__isnull=False
-        ).distinct().order_by('-created_at')
+        user = self.request.user
+        is_superuser = getattr(user, 'is_superuser', False)
+
+        if is_superuser:
+            qs = Order.objects.prefetch_related(
+                'workflow_tasks',
+                'items'
+            ).filter(
+                workflow_tasks__assigned_admin__isnull=False
+            ).distinct().order_by('-created_at')
+        else:
+            qs = Order.objects.prefetch_related(
+                'workflow_tasks',
+                'items'
+            ).filter(
+                workflow_tasks__assigned_admin=user
+            ).distinct().order_by('-created_at')
         
         # Filter by order status if provided
         order_status_filter = self.request.query_params.get('order_status')
@@ -1545,20 +1603,33 @@ class OrdersWithAssignedTasksView(generics.ListAPIView):
         # Additional filtering by task status (done in Python since it's prefetched)
         task_status_filter = request.query_params.get('task_status')
         admin_phone_filter = request.query_params.get('admin_phone')
+        is_superuser = getattr(request.user, 'is_superuser', False)
         
         # Pass filters to context for the serializer to use
         context = self.get_serializer_context()
         context['task_status_filter'] = task_status_filter
         context['admin_phone_filter'] = admin_phone_filter
+        context['current_user_id'] = request.user.id
+        context['is_superuser'] = is_superuser
         
         filtered_orders = []
+        seen_order_ids = set()
         total_filtered_tasks = 0
         
         for order in queryset:
+            if order.id in seen_order_ids:
+                continue
+
             assigned_tasks = [
                 task for task in order.workflow_tasks.all()
                 if task.assigned_admin_id
             ]
+            
+            if not is_superuser:
+                assigned_tasks = [
+                    task for task in assigned_tasks
+                    if task.assigned_admin_id == request.user.id
+                ]
             
             # Filter by task status if provided
             if task_status_filter:
@@ -1577,6 +1648,7 @@ class OrdersWithAssignedTasksView(generics.ListAPIView):
             # Only include orders that have matching tasks after filtering
             if assigned_tasks:
                 filtered_orders.append(order)
+                seen_order_ids.add(order.id)
                 total_filtered_tasks += len(assigned_tasks)
         
         serializer = self.get_serializer(filtered_orders, many=True, context=context)

@@ -354,15 +354,50 @@ class OrdersWithAssignedTasksApiTest(TestCase):
         self.assertEqual(data['summary']['total_tasks'], 3)  # Total 3 assigned tasks
         self.assertEqual(len(data['data']), 2)
         
-        # Each order should have its assigned tasks
+        # Each order should have its assigned tasks grouped by staff
         orders_by_id = {o['id']: o for o in data['data']}
         self.assertIn(self.order1.id, orders_by_id)
         self.assertIn(self.order2.id, orders_by_id)
         
-        # Order1 should have 1 task
-        self.assertEqual(len(orders_by_id[self.order1.id]['assigned_tasks']), 1)
-        # Order2 should have 2 tasks
-        self.assertEqual(len(orders_by_id[self.order2.id]['assigned_tasks']), 2)
+        self.assertIn('assigned_staff_groups', orders_by_id[self.order1.id])
+        self.assertEqual(len(orders_by_id[self.order1.id]['assigned_staff_groups']), 1)
+        self.assertEqual(len(orders_by_id[self.order1.id]['assigned_staff_groups'][0]['tasks']), 1)
+
+        self.assertEqual(len(orders_by_id[self.order2.id]['assigned_staff_groups']), 2)
+        self.assertEqual(len(orders_by_id[self.order2.id]['assigned_staff_groups'][0]['tasks']) + len(orders_by_id[self.order2.id]['assigned_staff_groups'][1]['tasks']), 2)
+
+    def test_staff_user_sees_only_their_own_assigned_orders(self):
+        self.client.force_login(self.staff1)
+        response = self.client.get(reverse('orders:orders-with-tasks'))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['summary']['total_orders'], 2)
+        self.assertEqual(data['summary']['total_tasks'], 2)
+        self.assertEqual(len(data['data']), 2)
+
+        for order in data['data']:
+            for staff_group in order['assigned_staff_groups']:
+                self.assertEqual(staff_group['staff_id'], self.staff1.id)
+
+    def test_orders_with_tasks_response_does_not_repeat_order_details_in_each_task(self):
+        self.client.force_login(self.super_admin)
+        response = self.client.get(reverse('orders:orders-with-tasks'))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success'], True)
+        self.assertGreaterEqual(len(data['data']), 1)
+
+        first_order = data['data'][0]
+        self.assertIn('assigned_staff_groups', first_order)
+        first_group = first_order['assigned_staff_groups'][0]
+        self.assertIn('tasks', first_group)
+        self.assertGreaterEqual(len(first_group['tasks']), 1)
+
+        first_task = first_group['tasks'][0]
+        self.assertNotIn('order_details', first_task)
 
     def test_filter_orders_with_tasks_by_task_status(self):
         self.client.force_login(self.super_admin)
@@ -374,9 +409,10 @@ class OrdersWithAssignedTasksApiTest(TestCase):
         data = response.json()
         self.assertEqual(len(data['data']), 1)  # Only order2 has completed task
         self.assertEqual(data['data'][0]['id'], self.order2.id)
-        # Should have only 1 task (the completed one)
-        self.assertEqual(len(data['data'][0]['assigned_tasks']), 1)
-        self.assertEqual(data['data'][0]['assigned_tasks'][0]['title'], 'Task 2')
+        # Should have only 1 task (the completed one) grouped under the relevant staff group
+        self.assertEqual(len(data['data'][0]['assigned_staff_groups']), 1)
+        self.assertEqual(len(data['data'][0]['assigned_staff_groups'][0]['tasks']), 1)
+        self.assertEqual(data['data'][0]['assigned_staff_groups'][0]['tasks'][0]['title'], 'Task 2')
 
     def test_filter_orders_with_tasks_by_staff_member(self):
         self.client.force_login(self.super_admin)
@@ -391,5 +427,6 @@ class OrdersWithAssignedTasksApiTest(TestCase):
         
         # All returned tasks should be assigned to staff1
         for order in data['data']:
-            for task in order['assigned_tasks']:
-                self.assertEqual(task['assigned_admin'], self.staff1.id)
+            for staff_group in order['assigned_staff_groups']:
+                for task in staff_group['tasks']:
+                    self.assertEqual(task['assigned_admin'], self.staff1.id)
