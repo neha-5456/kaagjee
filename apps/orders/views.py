@@ -1252,30 +1252,49 @@ class MyOrdersView(generics.ListAPIView):
         })
 
 
-class OrderDetailView(APIView):
-    """
-    Get single order detail
+# class OrderDetailView(APIView):
+#     """
+#     Get single order detail
     
-    GET /api/orders/<order_id>/
-    """
-    permission_classes = [IsAuthenticated]
+#     GET /api/orders/<order_id>/
+#     """
+#     permission_classes = [IsAuthenticated , IsSuperAdminPermission]
     
-    def get(self, request, order_id):
-        try:
-            order = Order.objects.prefetch_related(
-                'items', 'payments'
-            ).get(order_id=order_id, user=request.user)
-        except Order.DoesNotExist:
-            return Response({
-                'success': False,
-                'error': 'Order not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+#     def get(self, request, order_id):
+#         try:
+#             order = Order.objects.prefetch_related(
+#                 'items', 'payments'
+#             ).get(order_id=order_id, user=request.user)
+#         except Order.DoesNotExist:
+#             return Response({
+#                 'success': False,
+#                 'error': 'Order not found'
+#             }, status=status.HTTP_404_NOT_FOUND)
         
-        return Response({
-            'success': True,
-            'data': OrderSerializer(order).data
-        })
+#         return Response({
+#             'success': True,
+#             'data': OrderSerializer(order).data
+#         })
 
+class OrderDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        queryset = Order.objects.prefetch_related('items', 'payments')
+
+        if request.user.is_staff:
+            order = get_object_or_404(queryset, order_id=order_id)
+        else:
+            order = get_object_or_404(
+                queryset,
+                order_id=order_id,
+                user=request.user
+            )
+
+        return Response({
+            "success": True,
+            "data": OrderSerializer(order).data
+        })
 
 class OrderTaskListCreateView(APIView):
     """Super admin can list and create tasks for any order."""
