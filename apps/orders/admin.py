@@ -24,6 +24,8 @@ class OrderItemInline(admin.TabularInline):
     extra = 0
     readonly_fields = ['product', 'product_title', 'unit_price', 'form_submission', 'created_at']
     can_delete = False
+    verbose_name = 'Order Item'
+    verbose_name_plural = 'Order Items'
 
 
 class PaymentInline(admin.TabularInline):
@@ -34,6 +36,8 @@ class PaymentInline(admin.TabularInline):
         'razorpay_order_id', 'razorpay_payment_id', 'paid_at'
     ]
     can_delete = False
+    verbose_name = 'Payment History'
+    verbose_name_plural = 'Payment History'
 
 
 class OrderTaskDocumentInline(admin.TabularInline):
@@ -53,6 +57,8 @@ class OrderTaskInline(admin.TabularInline):
     ]
     readonly_fields = ['approved_by', 'approved_at', 'created_by', 'created_at', 'updated_at']
     show_change_link = True
+    verbose_name = 'Order Task'
+    verbose_name_plural = 'Order Tasks'
 
 
 # ========================
@@ -325,6 +331,8 @@ class CartAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    change_form_template = "admin/orders/order/change_form.html"
+
     list_display = [
         'order_id', 'user_phone', 'status_badge', 'payment_type',
         'total_amount', 'paid_amount', 'pending_badge', 'performa_download_btn', 'created_at'
@@ -338,7 +346,7 @@ class OrderAdmin(admin.ModelAdmin):
     ]
     date_hierarchy = 'created_at'
     ordering = ['-created_at']
-    inlines = [OrderItemInline, OrderTaskInline, PaymentInline]
+    inlines = [OrderTaskInline, OrderItemInline, PaymentInline]
 
     def get_urls(self):
         from django.urls import path
@@ -505,15 +513,15 @@ class OrderAdmin(admin.ModelAdmin):
         ('Order Info', {
             'fields': ('order_id', 'user', 'status')
         }),
+        ('User Details', {
+            'fields': ('user_name', 'user_email', 'user_phone')
+        }),
         ('Payment Details', {
             'fields': (
                 'payment_type', 'total_amount', 'paid_amount', 'pending_amount',
                 'first_payment_amount', 'first_payment_date',
                 'second_payment_amount', 'second_payment_date', 'second_payment_due_date'
             )
-        }),
-        ('User Details', {
-            'fields': ('user_name', 'user_email', 'user_phone')
         }),
         ('Notes', {
             'fields': ('user_notes', 'admin_notes')

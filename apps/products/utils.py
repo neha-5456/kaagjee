@@ -34,7 +34,7 @@ def calculate_total_price(product, form_data):
             field_type = field.get('field_type', '')
             has_price  = field.get('has_price', False)
 
-            if has_price and field_type in ('dropdown', 'radio', 'checkbox'):
+            if has_price and field_type in ('dropdown', 'radio', 'checkbox', 'multi_checkbox'):
                 selected_value = form_data.get(field_name, '')
                 if not selected_value:
                     # recurse into all options' nested_fields even if nothing selected
@@ -88,7 +88,7 @@ def get_priced_fields_from_schema(form_schema):
 
     def collect(fields):
         for field in (fields or []):
-            if field.get('has_price', False) and field.get('field_type') in ('dropdown', 'radio', 'checkbox'):
+            if field.get('has_price', False) and field.get('field_type') in ('dropdown', 'radio', 'checkbox', 'multi_checkbox'):
                 priced_fields.append({
                     'id': field.get('id', ''),
                     'label': field.get('label', ''),

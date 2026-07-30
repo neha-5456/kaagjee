@@ -385,6 +385,7 @@
         {type:'date',     icon:'fa-calendar',     label:'Date'},
         {type:'dropdown', icon:'fa-chevron-down', label:'Dropdown', hasOpts:true},
         {type:'checkbox', icon:'fa-check-square', label:'Checkbox', hasOpts:true},
+        {type:'multi_checkbox', icon:'fa-list-check', label:'Multi Checkbox', hasOpts:true},
         {type:'radio',    icon:'fa-circle-dot',   label:'Radio',    hasOpts:true},
         {type:'file',     icon:'fa-file-upload',  label:'File'},
         {type:'image',    icon:'fa-image',        label:'Image'},
@@ -1988,12 +1989,13 @@
                 (f.options||[]).forEach(function(o,i){ if(o.value===v&&(o.nested_fields||[]).length) $('#pv'+f.id+'_'+i).addClass('show'); });
             });
             $w.append($sel).append($nwrp);
-        } else if (t==='radio'||t==='checkbox') {
+        } else if (t==='radio'||t==='checkbox'||t==='multi_checkbox') {
             var $opts = $('<div class="fb-preview-opts"></div>');
             var $nwrp2 = $('<div></div>');
             (f.options||[]).forEach(function(o,i){
                 var $opt = $('<label class="fb-preview-opt"></label>');
-                var $inp = $('<input>').attr({type:t==='radio'?'radio':'checkbox',name:'pv_'+f.id}).val(o.value);
+                var $inp = $('<input>').attr({type:'checkbox',name:'pv_'+f.id}).val(o.value);
+                if (t==='radio') { $inp.attr('type','radio'); }
                 $opt.append($inp).append('<span>'+escH(o.label)+'</span>');
                 if (f.has_price&&o.price) $opt.append('<span class="opt-price-tag">₹'+o.price+'</span>');
                 $opts.append($opt);
