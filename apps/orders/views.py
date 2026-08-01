@@ -490,6 +490,71 @@ def remap_with_performa_keys(form_data, form_schema):
     return {key_map.get(k, k): v for k, v in form_data.items()}
 
 
+def _parse_date_field_value(value):
+    if not value:
+        return None
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+    try:
+        return datetime.strptime(value_str, '%Y-%m-%d').date()
+    except ValueError:
+        try:
+            return datetime.fromisoformat(value_str).date()
+        except ValueError:
+            return None
+
+
+def _month_difference_inclusive(start_date, end_date):
+    if end_date < start_date:
+        return -1
+    return (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+
+
+def validate_range_date_fields(form_schema, form_data):
+    """Validate range_date fields configured in the product form builder."""
+    errors = []
+
+    for field in (form_schema or []):
+        if field.get('field_type') != 'range_date':
+            continue
+
+        name = str(field.get('name', '')).strip()
+        if not name:
+            continue
+
+        label = field.get('label', name or 'Date Range')
+        start_key = f'{name}_start'
+        end_key = f'{name}_end'
+
+        start_value = form_data.get(start_key)
+        end_value = form_data.get(end_key)
+        start_date = _parse_date_field_value(start_value)
+        end_date = _parse_date_field_value(end_value)
+
+        if not start_date or not end_date:
+            errors.append(f"{label} requires both start and end dates.")
+            continue
+
+        if start_date > end_date:
+            errors.append(f"{label} start date cannot be after end date.")
+            continue
+
+        configured_start = _parse_date_field_value(field.get('range_start_date'))
+        configured_end = _parse_date_field_value(field.get('range_end_date'))
+        if configured_start and start_date < configured_start:
+            errors.append(f"{label} start date must be on or after {configured_start.isoformat()}.")
+        if configured_end and end_date > configured_end:
+            errors.append(f"{label} end date must be on or before {configured_end.isoformat()}.")
+
+        max_months = int(field.get('max_months') or field.get('allowed_months') or 11)
+        month_diff = _month_difference_inclusive(start_date, end_date)
+        if month_diff > max_months:
+            errors.append(f"{label} cannot exceed {max_months} months.")
+
+    return errors
+
+
 # ========================
 # FORM SUBMISSION APIs
 # ========================
@@ -540,9 +605,17 @@ class SubmitFormView(APIView):
         errors = []
         for field in (product.form_schema or []):
             if field.get('required') and field.get('name'):
-                if field['name'] not in form_data or not form_data[field['name']]:
+                if field.get('field_type') == 'range_date':
+                    start_key = f"{field['name']}_start"
+                    end_key = f"{field['name']}_end"
+                    if not form_data.get(start_key) or not form_data.get(end_key):
+                        errors.append(f"{field.get('label', field['name'])} requires both start and end dates")
+                elif field['name'] not in form_data or not form_data[field['name']]:
                     errors.append(f"{field.get('label', field['name'])} is required")
-        
+
+        range_errors = validate_range_date_fields(product.form_schema, form_data)
+        errors.extend(range_errors)
+
         if errors:
             return Response({
                 'success': False,
@@ -614,6 +687,25 @@ class SubmitFormWithFilesView(APIView):
 
         # performa_key se remap karo
         form_data = remap_with_performa_keys(form_data, product.form_schema)
+
+        # Validate required + range-date constraints
+        errors = []
+        for field in (product.form_schema or []):
+            if field.get('required') and field.get('name'):
+                if field.get('field_type') == 'range_date':
+                    start_key = f"{field['name']}_start"
+                    end_key = f"{field['name']}_end"
+                    if not form_data.get(start_key) or not form_data.get(end_key):
+                        errors.append(f"{field.get('label', field['name'])} requires both start and end dates")
+                elif field['name'] not in form_data or not form_data[field['name']]:
+                    errors.append(f"{field.get('label', field['name'])} is required")
+
+        errors.extend(validate_range_date_fields(product.form_schema, form_data))
+        if errors:
+            return Response({
+                'success': False,
+                'errors': errors
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         # Handle files
         uploaded_files = {}

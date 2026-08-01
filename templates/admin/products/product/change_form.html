@@ -383,6 +383,7 @@
         {type:'phone',    icon:'fa-phone',        label:'Phone'},
         {type:'number',   icon:'fa-hashtag',      label:'Number'},
         {type:'date',     icon:'fa-calendar',     label:'Date'},
+        {type:'range_date', icon:'fa-calendar-days', label:'Range Date'},
         {type:'dropdown', icon:'fa-chevron-down', label:'Dropdown', hasOpts:true},
         {type:'checkbox', icon:'fa-check-square', label:'Checkbox', hasOpts:true},
         {type:'multi_checkbox', icon:'fa-list-check', label:'Multi Checkbox', hasOpts:true},
@@ -1509,6 +1510,20 @@
             $g.append(makeSG('Placeholder','fb-f-ph-'+f.id, f.placeholder||'', 'Hint inside field'));
             $g.append(makeSG('Help Text','fb-f-ht-'+f.id, f.help_text||'', 'Text shown below field'));
         }
+
+        if (f.field_type === 'range_date') {
+            var $rangeStart = $('<div class="fb-sg"></div>');
+            $rangeStart.append('<label>Range Start Date</label>');
+            $rangeStart.append($('<input type="date" class="fb-f-rsd-'+f.id+'" value="'+escH(f.range_start_date||'')+'">'));
+            $g.append($rangeStart);
+
+            var $rangeEnd = $('<div class="fb-sg"></div>');
+            $rangeEnd.append('<label>Range End Date</label>');
+            $rangeEnd.append($('<input type="date" class="fb-f-red-'+f.id+'" value="'+escH(f.range_end_date||'')+'">'));
+            $g.append($rangeEnd);
+
+            $g.append(makeSG('Max Months','fb-f-rm-'+f.id, f.max_months||11, '11', 'number'));
+        }
         var $ig = $('<div class="fb-sg"></div>');
         $ig.append('<label>Field ID</label>');
         $ig.append('<input class="fb-id-input" readonly value="'+escH(f.name)+'">');
@@ -1553,6 +1568,9 @@
         });
         $p.find('.fb-f-ph-'+f.id).on('input', function(){ f.placeholder=$(this).val(); saveSchema(); });
         $p.find('.fb-f-ht-'+f.id).on('input', function(){ f.help_text=$(this).val(); saveSchema(); });
+        $p.find('.fb-f-rsd-'+f.id).on('input', function(){ f.range_start_date=$(this).val(); saveSchema(); });
+        $p.find('.fb-f-red-'+f.id).on('input', function(){ f.range_end_date=$(this).val(); saveSchema(); });
+        $p.find('.fb-f-rm-'+f.id).on('input', function(){ f.max_months=parseInt($(this).val())||11; saveSchema(); });
         $p.find('.fb-f-pk-'+f.id).on('input', function(){
             f.performa_key = $(this).val().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
             $(this).val(f.performa_key);
@@ -1963,6 +1981,11 @@
         if (['text','email','phone','number','date','aadhar','pan','pincode'].indexOf(t) > -1) {
             var it = t==='email'?'email':t==='number'?'number':t==='date'?'date':t==='phone'?'tel':'text';
             $w.append($('<input>').attr({type:it, placeholder:f.placeholder||''}));
+        } else if (t==='range_date') {
+            $w.append($('<div class="fb-preview-opts" style="display:grid;gap:8px"></div>'));
+            var $rangeWrap = $w.find('.fb-preview-opts');
+            $rangeWrap.append($('<label class="fb-preview-opt"><span>Start Date</span></label>').append($('<input type="date" name="'+escH(f.name)+'_start">')));
+            $rangeWrap.append($('<label class="fb-preview-opt"><span>End Date</span></label>').append($('<input type="date" name="'+escH(f.name)+'_end">')));
         } else if (t==='message') {
             var $msg = $('<div></div>').css({padding:'10px 12px',background:'#fef9c3',border:'1.5px solid #fbbf24',borderRadius:'8px',fontSize:'13px',color:'#92400e',lineHeight:'1.6'}).text(f.placeholder||f.label||'Message');
             $w.append($msg);
