@@ -93,6 +93,7 @@ class AdminNotification(models.Model):
         ORDER_CANCELLED = 'order_cancelled', 'Order Cancelled'
         NEW_USER        = 'new_user',        'New User Registration'
         FORM_SUBMISSION = 'form_submission', 'New Form Submission'
+        TASK_ACCEPTED   = 'task_accepted',   'Task Accepted'
 
     notification_type = models.CharField(max_length=30, choices=Type.choices)
     title             = models.CharField(max_length=200)

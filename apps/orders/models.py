@@ -227,6 +227,7 @@ class OrderTask(models.Model):
         PENDING = 'pending', 'Pending'
         ASSIGNED = 'assigned', 'Assigned'
         IN_PROGRESS = 'in_progress', 'In Progress'
+        ACCEPTED = 'accepted', 'Accepted'
         COMPLETED = 'completed', 'Completed'
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'

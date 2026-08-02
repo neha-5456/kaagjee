@@ -24,6 +24,8 @@ from .models import (
     FormSubmission, Cart, CartItem, Order, OrderItem, Payment,
     OrderTask, OrderTaskDocument
 )
+from apps.notifications.models import AdminNotification
+from apps.notifications import firebase
 from apps.products.models import Product
 from apps.products.utils import calculate_total_price
 
@@ -1540,17 +1542,44 @@ class MobileTaskSubmitView(APIView):
         files = request.FILES.getlist('files') or request.FILES.getlist('documents')
 
         rejected_actions = {'rejected', 'reject', 'rejection', 'declined', 'decline', 'false', '0'}
+        accepted_actions = {'accepted', 'accept', 'accepted_by_staff', 'true', '1'}
+
         if action in rejected_actions:
             task.status = OrderTask.Status.REJECTED
             task.payment_released = False
             task.approved_by = None
             task.approved_at = None
             task.completed_at = None
+        elif action in accepted_actions:
+            task.status = OrderTask.Status.ACCEPTED
+            task.payment_released = False
+            task.approved_by = None
+            task.approved_at = None
+            task.completed_at = None
+
+            admin_notification = AdminNotification.objects.create(
+                notification_type=AdminNotification.Type.TASK_ACCEPTED,
+                title=f'Task Accepted — {task.order.order_id}',
+                message=(
+                    f'Staff {getattr(user, "full_name", None) or getattr(user, "phone_number", "Unknown")} '
+                    f'accepted task "{task.title}" for order {task.order.order_id}.'
+                ),
+                order_id=task.order.order_id,
+                user_id=user.id,
+            )
+            firebase.push_to_admins(
+                title=f'✅ Task Accepted — {task.order.order_id}',
+                body=f'{task.title} has been accepted by staff.',
+                data={'type': 'task_accepted', 'order_id': task.order.order_id},
+                notif_obj=admin_notification,
+            )
         else:
             task.status = OrderTask.Status.COMPLETED
             task.payment_released = False
             task.approved_by = None
             task.approved_at = None
+            if not task.completed_at:
+                task.completed_at = timezone.now()
 
         task.remarks = remarks
         task.save()

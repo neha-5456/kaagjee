@@ -3,6 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.notifications.models import AdminNotification
 from apps.orders.models import Order, OrderTask
 
 
@@ -104,6 +105,30 @@ class MobileOrderTaskApiTests(TestCase):
         self.task.refresh_from_db()
         self.assertEqual(self.task.status, OrderTask.Status.REJECTED)
         self.assertEqual(self.task.remarks, 'Need better document')
+
+    def test_mobile_task_submit_marks_task_accepted_and_creates_admin_notification(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse('orders:mobile-task-submit', args=[self.task.id]),
+            {
+                'remarks': 'Task accepted by staff',
+                'status': 'accepted',
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, OrderTask.Status.ACCEPTED)
+        self.assertEqual(self.task.remarks, 'Task accepted by staff')
+        self.assertTrue(
+            AdminNotification.objects.filter(
+                notification_type=AdminNotification.Type.TASK_ACCEPTED,
+                order_id=self.order.order_id,
+                user_id=self.admin.id,
+            ).exists()
+        )
 
 
 class SuperAdminAssignedTasksApiTest(TestCase):

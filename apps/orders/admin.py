@@ -53,12 +53,20 @@ class OrderTaskInline(admin.TabularInline):
     fields = [
         'title', 'description', 'assigned_admin', 'payment_amount',
         'status', 'remarks', 'requires_file_upload', 'approved_by'
-         
     ]
     readonly_fields = ['approved_by', 'approved_at', 'created_by', 'created_at', 'updated_at']
     show_change_link = True
     verbose_name = 'Order Task'
     verbose_name_plural = 'Order Tasks'
+
+
+@admin.register(OrderTask)
+class OrderTaskAdmin(admin.ModelAdmin):
+    list_display = ['order', 'title', 'assigned_admin', 'status', 'requires_file_upload', 'payment_amount', 'completed_at', 'updated_at']
+    list_filter = ['status', 'requires_file_upload', 'assigned_admin']
+    search_fields = ['title', 'order__order_id', 'assigned_admin__phone_number']
+    readonly_fields = ['created_by', 'created_at', 'updated_at', 'approved_by', 'approved_at', 'completed_at']
+    inlines = [OrderTaskDocumentInline]
 
 
 # ========================

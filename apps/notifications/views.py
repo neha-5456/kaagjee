@@ -164,7 +164,10 @@ class AdminUnreadCountView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        count = AdminNotification.objects.filter(is_read=False).count()
+        qs = AdminNotification.objects.filter(is_read=False)
+        if t := request.query_params.get('type'):
+            qs = qs.filter(notification_type=t)
+        count = qs.count()
         return Response({'success': True, 'unread_count': count})
 
 

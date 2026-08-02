@@ -76,7 +76,7 @@ body {
     top: 0;
     left: 0;
     bottom: 0;
-    z-index: 99999;
+    z-index: 20;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -205,7 +205,7 @@ body.kaagjee-admin #header {
     border-bottom: 1px solid var(--gray-200) !important;
     position: sticky !important;
     top: 0 !important;
-    z-index: 100 !important;
+    z-index: 150 !important;
 }
 
 body.kaagjee-admin #branding {
@@ -234,6 +234,136 @@ body.kaagjee-admin #user-tools a {
 body.kaagjee-admin #user-tools a:hover {
     background: var(--gray-100) !important;
     color: var(--primary) !important;
+}
+
+body.kaagjee-admin #kaagjee-notify-wrap {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+body.kaagjee-admin #kaagjee-notify-btn {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 38px !important;
+    height: 38px !important;
+    border: 1px solid var(--gray-200) !important;
+    border-radius: 999px !important;
+    background: white !important;
+    color: var(--gray-700) !important;
+    cursor: pointer !important;
+    font-size: 18px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
+body.kaagjee-admin #kaagjee-notify-btn:hover {
+    background: var(--gray-50) !important;
+    color: var(--primary) !important;
+}
+
+body.kaagjee-admin #kaagjee-notify-badge {
+    position: absolute !important;
+    top: -4px !important;
+    right: -4px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 0 5px !important;
+    border-radius: 999px !important;
+    background: var(--danger) !important;
+    color: white !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    display: none !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 2px solid white !important;
+}
+
+body.kaagjee-admin #kaagjee-notify-panel {
+    position: absolute !important;
+    top: 48px !important;
+    right: 0 !important;
+    width: 340px !important;
+    max-height: 420px !important;
+    overflow: auto !important;
+    background: white !important;
+    border: 1px solid var(--gray-200) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16) !important;
+    display: none !important;
+    z-index: 3000 !important;
+}
+
+body.kaagjee-admin #kaagjee-notify-panel.open {
+    display: block !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 12px 14px !important;
+    border-bottom: 1px solid var(--gray-100) !important;
+    background: var(--gray-50) !important;
+    position: sticky !important;
+    top: 0 !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-header strong {
+    font-size: 13px !important;
+    color: var(--gray-800) !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-markall {
+    border: none !important;
+    background: transparent !important;
+    color: var(--primary) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-item {
+    padding: 12px 14px !important;
+    border-bottom: 1px solid var(--gray-100) !important;
+    cursor: pointer !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-item:hover {
+    background: var(--gray-50) !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-item.unread {
+    background: #eff6ff !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-item-title {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--gray-800) !important;
+    margin-bottom: 4px !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-item-message {
+    font-size: 12px !important;
+    color: var(--gray-600) !important;
+    margin: 0 !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-item-time {
+    font-size: 11px !important;
+    color: var(--gray-500) !important;
+    margin-top: 6px !important;
+}
+
+body.kaagjee-admin .kaagjee-notify-empty {
+    padding: 18px 14px !important;
+    font-size: 12px !important;
+    color: var(--gray-500) !important;
+    text-align: center !important;
 }
 
 /* Logout button in header */
@@ -943,6 +1073,164 @@ input[type="file"]:hover {
     
     if (document.body.classList.contains('login')) return;
     
+    function getCsrfToken() {
+        var csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfInput && csrfInput.value) return csrfInput.value;
+        var match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    function playNotificationSound() {
+        try {
+            var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            var context = new AudioContextClass();
+            var oscillator = context.createOscillator();
+            var gain = context.createGain();
+            oscillator.type = 'triangle';
+            oscillator.frequency.value = 880;
+            gain.gain.value = 0.03;
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.12);
+        } catch (e) {
+            console.warn('Audio notification unavailable', e);
+        }
+    }
+
+    function initNotificationBell() {
+        if (document.getElementById('kaagjee-notify-wrap')) return;
+
+        var notificationApiBase = '/api/v1/admin/notifications';
+        var notificationType = 'task_accepted';
+        var userTools = document.getElementById('user-tools');
+        if (!userTools) return;
+
+        var wrap = document.createElement('div');
+        wrap.id = 'kaagjee-notify-wrap';
+
+        var button = document.createElement('button');
+        button.id = 'kaagjee-notify-btn';
+        button.type = 'button';
+        button.setAttribute('aria-label', 'Admin notifications');
+        button.innerHTML = '🔔';
+
+        var badge = document.createElement('span');
+        badge.id = 'kaagjee-notify-badge';
+        badge.textContent = '0';
+        button.appendChild(badge);
+
+        var panel = document.createElement('div');
+        panel.id = 'kaagjee-notify-panel';
+        panel.innerHTML = '<div class="kaagjee-notify-header"><strong>Task Notifications</strong><button type="button" class="kaagjee-notify-markall">Mark all read</button></div><div class="kaagjee-notify-empty">Loading notifications...</div>';
+
+        wrap.appendChild(button);
+        wrap.appendChild(panel);
+        userTools.insertBefore(wrap, userTools.firstChild);
+
+        var lastUnreadCount = null;
+        var panelBody = panel.querySelector('.kaagjee-notify-empty');
+
+        function renderPanel(data) {
+            var items = data.data || [];
+            if (!items.length) {
+                panel.innerHTML = '<div class="kaagjee-notify-header"><strong>Task Notifications</strong><button type="button" class="kaagjee-notify-markall">Mark all read</button></div><div class="kaagjee-notify-empty">No task notifications yet.</div>';
+                return;
+            }
+
+            var html = '<div class="kaagjee-notify-header"><strong>Task Notifications</strong><button type="button" class="kaagjee-notify-markall">Mark all read</button></div>';
+            items.forEach(function(item) {
+                var readable = item.is_read ? '' : 'unread';
+                var dateText = item.created_at ? new Date(item.created_at).toLocaleString() : '';
+                html += '<div class="kaagjee-notify-item ' + readable + '" data-id="' + item.id + '">'
+                    + '<div class="kaagjee-notify-item-title">' + (item.title || 'Notification') + '</div>'
+                    + '<p class="kaagjee-notify-item-message">' + (item.message || '') + '</p>'
+                    + '<div class="kaagjee-notify-item-time">' + dateText + '</div>'
+                    + '</div>';
+            });
+            panel.innerHTML = html;
+
+            panel.querySelectorAll('.kaagjee-notify-item').forEach(function(itemEl) {
+                itemEl.addEventListener('click', function() {
+                    var id = itemEl.getAttribute('data-id');
+                    fetch(notificationApiBase + '/admin/' + id + '/mark-read/', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    }).then(function() {
+                        fetchNotifications();
+                    });
+                });
+            });
+
+            var markAllBtn = panel.querySelector('.kaagjee-notify-markall');
+            if (markAllBtn) {
+                markAllBtn.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    fetch(notificationApiBase + '/admin/mark-all-read/', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    }).then(function() {
+                        fetchNotifications();
+                    });
+                });
+            }
+        }
+
+        function updateBadge(count) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline-flex' : 'none';
+            if (lastUnreadCount !== null && count > lastUnreadCount) {
+                playNotificationSound();
+            }
+            lastUnreadCount = count;
+        }
+
+        function fetchNotifications() {
+            Promise.all([
+                fetch(notificationApiBase + '/admin/?type=' + notificationType, {credentials: 'same-origin'}),
+                fetch(notificationApiBase + '/admin/unread-count/?type=' + notificationType, {credentials: 'same-origin'})
+            ])
+            .then(function(responses) {
+                return Promise.all(responses.map(function(response) { return response.json(); }));
+            })
+            .then(function(results) {
+                var listData = results[0] || {};
+                var unreadData = results[1] || {};
+                renderPanel(listData);
+                updateBadge(Number(unreadData.unread_count || 0));
+            })
+            .catch(function() {
+                panel.innerHTML = '<div class="kaagjee-notify-header"><strong>Task Notifications</strong><button type="button" class="kaagjee-notify-markall">Mark all read</button></div><div class="kaagjee-notify-empty">Unable to load task notifications.</div>';
+            });
+        }
+
+        button.addEventListener('click', function(event) {
+            event.stopPropagation();
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                fetchNotifications();
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!wrap.contains(event.target)) {
+                panel.classList.remove('open');
+            }
+        });
+
+        fetchNotifications();
+        window.setInterval(fetchNotifications, 5000);
+    }
+
     function initSidebar() {
         if (document.getElementById('kaagjee-sidebar')) return;
         
@@ -956,8 +1244,7 @@ input[type="file"]:hover {
             el.classList.remove('shifted');
         });
         
-        var csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-        var csrfToken = csrfInput ? csrfInput.value : '';
+        var csrfToken = getCsrfToken();
         var currentPath = window.location.pathname;
         
         var sidebar = document.createElement('div');
@@ -1008,6 +1295,7 @@ input[type="file"]:hover {
         document.body.appendChild(toggle);
         
         document.body.classList.add('kaagjee-admin');
+        initNotificationBell();
         
         // Move add button to toolbar
         setTimeout(function() {
